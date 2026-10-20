@@ -18,16 +18,16 @@ Control Active Noise Cancellation (ANC), Ambient Aware, TalkThru, multi-band gra
   sudo usermod -aG bluetooth $USER
   # Log out and log back in for group changes to take effect
   ```
-- **Dependencies**: `textual>=0.40.0`, `rich>=13.0.0`, `platformdirs>=4.0.0`
+- **Dependencies**: `textual>=0.50.0`, `rich>=13.0.0`, `platformdirs>=4.0.0`
 
 ---
 
 ## ✨ Features
 
-- 🎧 **Comprehensive Multi-Model Catalog** — Support for 27+ cataloged models across 4 device categories (Over-Ear, TWS Earbuds, Portable Speakers, PartyBox) and 11 model families (Tune, Live, Tour, Wave/Vibe, Endurance Peak, Flip, Charge, Xtreme, Boombox, Pulse, PartyBox) plus 3 fallback archetypes for uncataloged devices.
+- 🎧 **Comprehensive Multi-Model Catalog** — Support for 30 cataloged models across 4 device categories (Over-Ear, TWS Earbuds, Portable Speakers, PartyBox) and 11 model families (Tune, Live, Tour, Wave/Vibe, Endurance Peak, Flip, Charge, Xtreme, Boombox, Pulse, PartyBox) plus 3 fallback archetypes for uncataloged devices.
 - 🔇 **Noise Control** — Switch between Active Noise Cancellation (ANC), Ambient Aware, TalkThru, and Off (gated per model capability).
 - 🎚️ **Equalizer & Live Tuner** — In-terminal ASCII curve visualizer, standard presets (`flat`, `jazz`, `vocal`, `bass`, `club`), custom band gain tuning (10-band, 5-band, 3-band), interactive `W, A, S, D` navigation, and `Ctrl+S` configuration persistence.
-- 🔋 **Battery Health & Retention Estimator** — Tracks historical charge cycles in local SQLite (`~/.local/share/jblpc/health.db`). Derives estimated Equivalent Full Cycles (EFC), active discharge rate (%/hr), and retention degradation trends with confidence ratings (`low`, `medium`, `high`).
+- 🔋 **Battery Health & Retention Estimator** — Tracks historical charge cycles in local SQLite (`~/.local/share/tunedeck/health.db` or `~/.local/share/jblpc/health.db`). Derives estimated Equivalent Full Cycles (EFC), active discharge rate (%/hr), and retention degradation trends with confidence ratings (`low`, `medium`, `high`).
 - ⚡ **Power Management** — Remote power-off command with safe hardware gating.
 - 🖥️ **Rich Textual TUI** — Dark aesthetic in signature orange (`#FF6600`), featuring real-time EQ sliders, TWS Trio gauges (Left, Right, Case), activity logs, and a toggleable Health panel.
 - ⌨️ **Scriptable CLI** — Machine-readable `--json` output across status, health, and equalizer for desktop automation and keybinding daemons.
@@ -40,14 +40,17 @@ Control Active Noise Cancellation (ANC), Ambient Aware, TalkThru, multi-band gra
 
 | Category | Model / Family | Verification Tier | Capabilities Supported |
 |---|---|---|---|
-| **Over-Ear** | JBL Tune 770NC | **Verified on Hardware** | ANC, Ambient, TalkThru, Off, Battery Telemetry, 5-Band EQ, Remote Power-Off |
-| **Over-Ear** | Live 770NC, 670NC, 660NC, Tour ONE M2 | **Simulator & Protocol Validated** | ANC, Ambient, TalkThru, 10-Band EQ, Battery, Power-Off |
-| **Over-Ear** | Tune 720BT, 520BT, 510BT | **Simulator & Protocol Validated** | Battery Telemetry, Power-Off (EQ on 720BT/520BT; 510BT non-EQ) |
-| **TWS Earbuds** | Tune 230NC, 130NC, Live PRO 2, Tour PRO 2 | **Simulator & Protocol Validated** | ANC, Ambient, TalkThru, Trio Battery (L/R/Case), 10-Band EQ |
-| **TWS Earbuds** | Wave / Vibe Buds, Endurance Peak 3 | **Simulator & Protocol Validated** | Ambient Aware, TalkThru, Trio Battery (ANC non-supported) |
-| **Speakers** | Flip 6, Charge 5, Xtreme 4, Boombox 3 | **Simulator & Protocol Validated** | Battery Telemetry, 3-Band EQ, PartyBoost/Auracast Flags, Power-Off |
-| **PartyBox** | PartyBox 310, 110, Stage 320, Club 120 | **Simulator & Protocol Validated** | Battery / AC Power Telemetry, 3-Band EQ, Lightshow Controls |
-| **Uncataloged** | Other JBL Bluetooth Devices | **Generic Fallback & Diagnostics** | Heuristic fallback profiles + `tunedeck cli diagnose` export |
+| **Over-Ear** | JBL Tune 770NC | **Verified on Hardware** | ANC, Ambient Aware, TalkThru, Off, Battery Telemetry, 10-Band EQ, Remote Power-Off |
+| **Over-Ear** | Live 770NC, 670NC, 660NC, 460NC, Tour ONE M2 | **Simulator & Protocol Validated** | ANC, Ambient Aware, TalkThru, Spatial Audio (Live/Tour), 10-Band EQ, Battery, Remote Power-Off |
+| **Over-Ear** | Tune 760NC, 670NC, 660NC | **Simulator & Protocol Validated** | ANC, Off, 10-Band EQ, Battery, Remote Power-Off (Ambient/TalkThru on 670NC; 760NC/660NC ANC-only) |
+| **Over-Ear** | Tune 720BT, 710BT, 520BT | **Simulator & Protocol Validated** | Battery Telemetry, 10-Band EQ, Remote Power-Off |
+| **Over-Ear** | Tune 510BT | **Simulator & Protocol Validated** | Battery Telemetry, Remote Power-Off (Non-EQ Hardware) |
+| **TWS Earbuds** | Live PRO 2 TWS, Tour PRO 2 | **Simulator & Protocol Validated** | ANC, Ambient Aware, TalkThru, Spatial Audio, Trio Battery (Left/Right/Case), 10-Band EQ |
+| **TWS Earbuds** | Tune 230NC TWS, 130NC TWS, Tune Beam, Tune Flex | **Simulator & Protocol Validated** | ANC, Ambient Aware, TalkThru, Trio Battery (Left/Right/Case), 5-Band EQ |
+| **TWS Earbuds** | Wave / Vibe Buds, Endurance Peak 3 | **Simulator & Protocol Validated** | Ambient Aware, TalkThru, Trio Battery (Left/Right/Case), 5-Band EQ (ANC non-supported) |
+| **Speakers** | Flip 6, Charge 5, Xtreme 4, Boombox 3, Pulse 5 | **Simulator & Protocol Validated** | Battery Telemetry, 3-Band EQ, PartyBoost / Auracast Flags, Lightshow (Pulse 5), Remote Power-Off |
+| **PartyBox** | PartyBox 310, 110, Stage 320, Club 120 | **Simulator & Protocol Validated** | Battery / AC Power Telemetry, 3-Band EQ, Auracast (Stage/Club), Lightshow Controls, Remote Power-Off |
+| **Uncataloged** | Other JBL Bluetooth Devices | **Generic Fallback & Diagnostics** | Heuristic fallback profiles (Headphones, TWS, Speaker) + `tunedeck cli diagnose` export |
 
 ---
 
@@ -90,15 +93,16 @@ Set your device's Bluetooth MAC address:
 ```bash
 # Via environment variable
 export JBL_BD="AA:BB:CC:DD:EE:FF"
+# (or export TUNEDECK_BD="AA:BB:CC:DD:EE:FF")
 
-# Or via XDG config file (~/.config/jblpc/config.json)
-mkdir -p ~/.config/jblpc
-echo '{"bluetooth_address": "AA:BB:CC:DD:EE:FF"}' > ~/.config/jblpc/config.json
+# Or via XDG config file (~/.config/tunedeck/config.json or ~/.config/jblpc/config.json)
+mkdir -p ~/.config/tunedeck
+echo '{"bluetooth_address": "AA:BB:CC:DD:EE:FF"}' > ~/.config/tunedeck/config.json
 ```
 
 Discover paired JBL devices on your system:
 ```bash
-jblpc cli scan
+tunedeck cli scan
 ```
 
 ---
@@ -107,8 +111,8 @@ jblpc cli scan
 
 > [!CAUTION]
 > - **Live Device Writes**: Commands (`anc`, `ambient`, `talkthru`, `noiseoff`, `eq`, and `poweroff`) transmit raw Airoha RACE protocol frames over Bluetooth RFCOMM channel 21 directly to the device firmware.
-> - **Accidental Power-Off Protection**: Remote power-off on real hardware is protected by strict safety gating. In automated tests, it requires `--hardware`, a valid `JBL_BD`, and `JBLPC_ALLOW_POWEROFF=1`.
-> - **Uncataloged Models**: If your device is not listed in `jblpc cli models`, run `jblpc cli diagnose` first to inspect detected capabilities before applying custom equalizer curves or power-off commands.
+> - **Accidental Power-Off Protection**: Remote power-off on real hardware is protected by strict safety gating. In automated tests, it requires `--hardware`, a valid `JBL_BD` (or `TUNEDECK_BD`), and `JBLPC_ALLOW_POWEROFF=1` (or `TUNEDECK_ALLOW_POWEROFF=1`).
+> - **Uncataloged Models**: If your device is not listed in `tunedeck cli models`, run `tunedeck cli diagnose` first to inspect detected capabilities before applying custom equalizer curves or power-off commands.
 
 ---
 
@@ -136,7 +140,7 @@ jblpc cli scan
 
 View active EQ curve:
 ```bash
-jblpc cli eq
+tunedeck cli eq
 ```
 ```text
 🎚️ Equalizer — JBL Tune 770NC (10_BAND)
@@ -159,38 +163,38 @@ jblpc cli eq
 ### Interactive Equalizer Tuning
 Tune EQ interactively in the terminal with live visual feedback:
 ```bash
-jblpc cli eq -i
-# or: jblpc cli eq --interactive
+tunedeck cli eq -i
+# or: tunedeck cli eq --interactive
 ```
 - **A / D** (or `←` / `→`): Navigate between frequency bands
 - **W / S** (or `↑` / `↓`): Increase / decrease gain ($\pm 1\text{dB}$)
-- **Ctrl+S**: Save active curve to `~/.config/jblpc/config.json` and apply to headset
+- **Ctrl+S**: Save active curve to config (`~/.config/tunedeck/config.json`) and apply to headset
 - **Q**: Exit interactive tuner
 
 ### Preset Selection
 ```bash
-jblpc cli eq bass
-jblpc cli eq vocal
-jblpc cli eq jazz
-jblpc cli eq flat
-jblpc cli eq club
+tunedeck cli eq bass
+tunedeck cli eq vocal
+tunedeck cli eq jazz
+tunedeck cli eq flat
+tunedeck cli eq club
 # Add --save to remember this preset across launches:
-jblpc cli eq bass --save
+tunedeck cli eq bass --save
 ```
 
 ### Custom Band Gains
 Set custom band dB values ($-12\text{dB}$ to $+12\text{dB}$):
 ```bash
 # 10-band models (e.g. Tune 770NC):
-jblpc cli eq 5 4 3 2 1 0 -1 -2 -3 -4 --save
+tunedeck cli eq 5 4 3 2 1 0 -1 -2 -3 -4 --save
 
 # Or via --bands flag:
-jblpc cli eq --bands=6,5,4,2,0,0,0,0,0,0 --save
+tunedeck cli eq --bands=6,5,4,2,0,0,0,0,0,0 --save
 ```
 
 Save current EQ to configuration:
 ```bash
-jblpc cli eq save
+tunedeck cli eq save
 ```
 
 ---
@@ -198,7 +202,7 @@ jblpc cli eq save
 ## 🔋 Battery Health & Wear Estimator
 
 > [!IMPORTANT]
-> **Measurement Notice**: JBL Bluetooth firmware exposes state-of-charge percentage (0–100%) and charging flags, but does **not** expose hardware cycle counters, cell wear registers, or design capacity over Bluetooth. **All cycle counts, discharge rates, and retention percentages calculated by JBLPc are mathematical estimates derived from usage telemetry, NOT hardware wear registers.**
+> **Measurement Notice**: JBL Bluetooth firmware exposes state-of-charge percentage (0–100%) and charging flags, but does **not** expose hardware cycle counters, cell wear registers, or design capacity over Bluetooth. **All cycle counts, discharge rates, and retention percentages calculated by TuneDeck (JBLPc) are mathematical estimates derived from usage telemetry, NOT hardware wear registers.**
 
 - **Equivalent Full Cycles (EFC)**: Derived as $\sum \Delta \text{charge}_{\text{positive}} / 100$, tracking only upward charging movements (discharging is excluded).
 - **Discharge Rate**: Linear regression of battery loss during active playback (%/hour).
@@ -207,13 +211,13 @@ jblpc cli eq save
 
 ```bash
 # View battery health overview table
-jblpc cli health
+tunedeck cli health
 
 # Export machine-readable JSON health report
-jblpc cli health --json
+tunedeck cli health --json
 
 # Run background polling logger
-jblpc cli battery-log --interval 300 --count 12
+tunedeck cli battery-log --interval 300 --count 12
 ```
 
 ---

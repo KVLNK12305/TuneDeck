@@ -1,4 +1,4 @@
-# JBLPc Changelog
+# TuneDeck (JBLPc) Changelog
 
 All notable changes, bug fixes, and additions developed for the end-to-end testing suite, multi-model catalog expansion, and battery health tracking system.
 
@@ -8,7 +8,7 @@ All notable changes, bug fixes, and additions developed for the end-to-end testi
 
 ### Added
 - **Multi-Model Catalog Expansion (`jblpc/models.py`)**:
-  - Expanded catalog from single model to 27 distinct JBL devices across 4 major families:
+  - Expanded catalog to 30 distinct JBL devices across 4 major families:
     - *Over-Ear & On-Ear*: Tune 770NC, 760NC, 720BT, 710BT, 670NC, 660NC, 520BT, 510BT, Live 770NC, 670NC, 660NC, 460NC, Tour ONE M2.
     - *True Wireless (TWS)*: Tune 230NC TWS, 130NC TWS, Tune Beam, Tune Flex, Live PRO 2 TWS, Tour PRO 2, Wave/Vibe Buds, Endurance Peak 3.
     - *Portable Speakers*: Flip 6, Charge 5, Xtreme 4, Boombox 3, Pulse 5.
