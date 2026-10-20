@@ -70,9 +70,9 @@ def test_hardware_safe_poweroff(hardware_target):
     Destructive hardware test: Power off physical device.
     Strictly guarded by JBLPC_ALLOW_POWEROFF=1.
     """
-    allow = os.environ.get("JBLPC_ALLOW_POWEROFF", "").strip()
+    allow = os.environ.get("TUNEDECK_ALLOW_POWEROFF", os.environ.get("JBLPC_ALLOW_POWEROFF", "")).strip()
     if allow != "1":
-        pytest.skip("Destructive power-off requires JBLPC_ALLOW_POWEROFF=1 environment variable.")
+        pytest.skip("Destructive power-off requires TUNEDECK_ALLOW_POWEROFF=1 or JBLPC_ALLOW_POWEROFF=1 environment variable.")
 
     controller = HeadsetController(bt_address=hardware_target, simulate=False)
     assert controller.connect() is True

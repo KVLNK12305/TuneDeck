@@ -53,13 +53,14 @@ def is_valid_mac(address: str) -> bool:
 
 
 def get_config_dir() -> Path:
-    """Return XDG configuration directory for JBLPc."""
+    """Return XDG configuration directory for TuneDeck / JBLPc."""
     xdg = os.environ.get("XDG_CONFIG_HOME")
-    if xdg:
-        p = Path(xdg) / "jblpc"
-    else:
-        p = Path.home() / ".config" / "jblpc"
-    return p
+    base = Path(xdg) if xdg else (Path.home() / ".config")
+    tunedeck_dir = base / "tunedeck"
+    jblpc_dir = base / "jblpc"
+    if tunedeck_dir.exists() and (tunedeck_dir / "config.json").exists():
+        return tunedeck_dir
+    return jblpc_dir
 
 
 def get_config_file() -> Path:
@@ -272,11 +273,18 @@ def load_config() -> dict:
         "eq_bands": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     }
 
-    env_addr = os.environ.get("JBL_BD", "").strip()
+    env_addr = (os.environ.get("TUNEDECK_BD") or os.environ.get("JBL_BD") or "").strip()
     if env_addr:
         config["bluetooth_address"] = env_addr
 
     config_file = get_config_file()
+    if not config_file.exists():
+        xdg = os.environ.get("XDG_CONFIG_HOME")
+        base = Path(xdg) if xdg else (Path.home() / ".config")
+        alt = base / "tunedeck" / "config.json"
+        if alt.exists():
+            config_file = alt
+
     if config_file.exists():
         try:
             content = config_file.read_text(encoding="utf-8")

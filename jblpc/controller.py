@@ -122,14 +122,15 @@ class HeadsetController:
         else:
             profile = SUPPORTED_MODELS[0]
 
+        initial_log = []
         initial_bands = [0] * len(profile.eq_band_frequencies)
         try:
             cfg = load_config()
             saved_bands = cfg.get("eq_bands")
             if saved_bands and len(saved_bands) == len(profile.eq_band_frequencies):
                 initial_bands = [max(-12, min(12, int(b))) for b in saved_bands]
-        except Exception:
-            pass
+        except (ConfigError, ValueError, KeyError) as e:
+            initial_log.append(f"Using default EQ bands: {e}")
 
         self.state = HeadsetState(
             bt_address=bt_address,
@@ -140,7 +141,7 @@ class HeadsetController:
         self._simulate = simulate
         self._connection: Optional[BluetoothConnection] = connection
         self._listeners: list[Callable[[HeadsetState], None]] = []
-        self._log: list[str] = []
+        self._log: list[str] = initial_log
         self.last_error: Optional[str] = None
 
         if not simulate and bt_address and self._connection is None:

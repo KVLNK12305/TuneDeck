@@ -20,15 +20,20 @@ from .exceptions import JBLPcError
 
 
 def get_data_dir() -> Path:
-    """Get the XDG data directory for jblpc."""
+    """Get the XDG data directory for TuneDeck / JBLPc."""
     xdg_data = os.environ.get("XDG_DATA_HOME")
     if xdg_data:
         base = Path(xdg_data)
     else:
         base = Path.home() / ".local" / "share"
-    data_dir = base / "jblpc"
+    tunedeck_dir = base / "tunedeck"
+    jblpc_dir = base / "jblpc"
+    if tunedeck_dir.exists() and (tunedeck_dir / "health.db").exists():
+        return tunedeck_dir
+    data_dir = jblpc_dir
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir
+
 
 
 DEFAULT_DB_PATH = get_data_dir() / "health.db"
