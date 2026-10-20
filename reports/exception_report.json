@@ -1,0 +1,571 @@
+{
+  "summary": {
+    "total_scenarios": 20,
+    "handled_scenarios": 20,
+    "unhandled_scenarios": 0,
+    "bare_except_count": 0,
+    "swallowed_exceptions_count": 18
+  },
+  "ast_scan": {
+    "bare_excepts": [],
+    "swallowed_exceptions": [
+      {
+        "file": "jblpc/controller.py",
+        "line": 131,
+        "type": "Exception",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 353,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 431,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 743,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 748,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 753,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 759,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 765,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 770,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 775,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 795,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 830,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 837,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 844,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 851,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 180,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 787,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 380,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      }
+    ],
+    "handled_handlers": [
+      {
+        "file": "jblpc/lock.py",
+        "line": 39,
+        "type": "(IOError, OSError)"
+      },
+      {
+        "file": "jblpc/lock.py",
+        "line": 54,
+        "type": "OSError"
+      },
+      {
+        "file": "jblpc/lock.py",
+        "line": 60,
+        "type": "OSError"
+      },
+      {
+        "file": "jblpc/lock.py",
+        "line": 43,
+        "type": "OSError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 309,
+        "type": "OSError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 467,
+        "type": "FileNotFoundError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 469,
+        "type": "subprocess.TimeoutExpired"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 481,
+        "type": "(subprocess.TimeoutExpired, FileNotFoundError)"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 502,
+        "type": "subprocess.TimeoutExpired"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 522,
+        "type": "subprocess.TimeoutExpired"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 539,
+        "type": "subprocess.TimeoutExpired"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 289,
+        "type": "json.JSONDecodeError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 291,
+        "type": "OSError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 358,
+        "type": "PermissionError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 362,
+        "type": "ConnectionRefusedError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 366,
+        "type": "(socket.timeout, TimeoutError)"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 370,
+        "type": "(OSError, socket.error)"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 393,
+        "type": "(OSError, socket.error)"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 185,
+        "type": "ValueError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 380,
+        "type": "OSError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 424,
+        "type": "socket.timeout"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 427,
+        "type": "(OSError, socket.error)"
+      },
+      {
+        "file": "jblpc/health.py",
+        "line": 95,
+        "type": "sqlite3.DatabaseError"
+      },
+      {
+        "file": "jblpc/health.py",
+        "line": 154,
+        "type": "sqlite3.DatabaseError"
+      },
+      {
+        "file": "jblpc/health.py",
+        "line": 198,
+        "type": "sqlite3.DatabaseError"
+      },
+      {
+        "file": "jblpc/health.py",
+        "line": 211,
+        "type": "sqlite3.DatabaseError"
+      },
+      {
+        "file": "jblpc/health.py",
+        "line": 116,
+        "type": "(sqlite3.DatabaseError, OSError)"
+      },
+      {
+        "file": "jblpc/cli.py",
+        "line": 272,
+        "type": "OSError"
+      },
+      {
+        "file": "jblpc/cli.py",
+        "line": 733,
+        "type": "KeyboardInterrupt"
+      },
+      {
+        "file": "jblpc/cli.py",
+        "line": 736,
+        "type": "(ConfigError, BluetoothAdapterError, DeviceNotPairedError, JBLConnectionError, ProtocolError, UnsupportedCommandError, InstanceLockError)"
+      },
+      {
+        "file": "jblpc/cli.py",
+        "line": 747,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/cli.py",
+        "line": 465,
+        "type": "ValueError"
+      },
+      {
+        "file": "jblpc/cli.py",
+        "line": 662,
+        "type": "ValueError"
+      },
+      {
+        "file": "jblpc/cli.py",
+        "line": 674,
+        "type": "ValueError"
+      },
+      {
+        "file": "jblpc/controller.py",
+        "line": 228,
+        "type": "BluetoothAdapterError"
+      },
+      {
+        "file": "jblpc/controller.py",
+        "line": 553,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/controller.py",
+        "line": 169,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/__main__.py",
+        "line": 69,
+        "type": "KeyboardInterrupt"
+      },
+      {
+        "file": "jblpc/__main__.py",
+        "line": 71,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/__main__.py",
+        "line": 61,
+        "type": "(EOFError, KeyboardInterrupt)"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 223,
+        "type": "NoMatches"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 437,
+        "type": "NoMatches"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 462,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 475,
+        "type": "NoMatches"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 721,
+        "type": "(AttributeError, ValueError)"
+      }
+    ]
+  },
+  "fault_scenarios": [
+    {
+      "id": 1,
+      "scenario": "Bluetooth adapter off or missing",
+      "exception_type": "BluetoothAdapterError",
+      "injection_point": "jblpc.protocol.check_bluetooth_adapter_powered",
+      "raised": true,
+      "where_caught": "jblpc/cli.py:503, jblpc/controller.py:217",
+      "user_message": "\u2717 Error: Bluetooth adapter is powered off or missing.",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 2,
+      "scenario": "bluetoothctl not installed",
+      "exception_type": "BluetoothAdapterError (from FileNotFoundError)",
+      "injection_point": "jblpc.protocol.check_bluetoothctl_available",
+      "raised": true,
+      "where_caught": "jblpc/cli.py:503, jblpc/controller.py:217",
+      "user_message": "\u2717 Error: bluetoothctl utility is not installed on this system.",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 3,
+      "scenario": "Device not paired",
+      "exception_type": "DeviceNotPairedError",
+      "injection_point": "jblpc.protocol.check_device_paired",
+      "raised": false,
+      "where_caught": "jblpc/controller.py:224, jblpc/cli.py:504",
+      "user_message": "\u2717 Error: Device AA:BB:CC:DD:EE:FF is not paired via Bluetooth.",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 4,
+      "scenario": "Invalid or missing MAC address",
+      "exception_type": "JBLConnectionError",
+      "injection_point": "jblpc.protocol.is_valid_mac / controller.connect",
+      "raised": false,
+      "where_caught": "jblpc/controller.py:205-212",
+      "user_message": "\u2717 Error: No Bluetooth address configured / Invalid Bluetooth MAC address",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 5,
+      "scenario": "Corrupt or empty config.json",
+      "exception_type": "ConfigError",
+      "injection_point": "jblpc.protocol.load_config",
+      "raised": true,
+      "where_caught": "jblpc/cli.py:502, jblpc/__main__.py:69",
+      "user_message": "\u2717 Error: Configuration file ... is empty / Corrupt configuration file",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 6,
+      "scenario": "Missing config directory",
+      "exception_type": "None (Handled gracefully with defaults)",
+      "injection_point": "jblpc.protocol.load_config / save_config",
+      "raised": false,
+      "where_caught": "jblpc/protocol.py:280, 305",
+      "user_message": "Auto-creates directory hierarchy ~/.config/jblpc",
+      "exit_code": 0,
+      "status": "PASS"
+    },
+    {
+      "id": 7,
+      "scenario": "Connection refused",
+      "exception_type": "ConnectionRefusedError",
+      "injection_point": "socket.socket.connect / BluetoothConnection.connect",
+      "raised": true,
+      "where_caught": "jblpc/protocol.py:361, jblpc/controller.py:247",
+      "user_message": "\u2717 Error: Connection refused by AA:BB:CC:DD:EE:FF on RFCOMM channel 21",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 8,
+      "scenario": "Connect timeout",
+      "exception_type": "TimeoutError / socket.timeout",
+      "injection_point": "socket.socket.connect / BluetoothConnection.connect",
+      "raised": true,
+      "where_caught": "jblpc/protocol.py:365, jblpc/controller.py:247",
+      "user_message": "\u2717 Error: Connection timeout after 5.0s connecting to AA:BB:CC:DD:EE:FF",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 9,
+      "scenario": "Read timeout",
+      "exception_type": "socket.timeout",
+      "injection_point": "socket.socket.recv / BluetoothConnection.receive",
+      "raised": true,
+      "where_caught": "jblpc/protocol.py:423-425",
+      "user_message": "None (non-blocking loop returns available frames; socket stays clean)",
+      "exit_code": 0,
+      "status": "PASS"
+    },
+    {
+      "id": 10,
+      "scenario": "Disconnect mid-command",
+      "exception_type": "EOF / b'' received",
+      "injection_point": "socket.socket.recv / BluetoothConnection.receive",
+      "raised": false,
+      "where_caught": "jblpc/protocol.py:418-421",
+      "user_message": "\u2717 Remote device disconnected unexpectedly mid-session.",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 11,
+      "scenario": "Partial frame",
+      "exception_type": "Incomplete buffer (< total length)",
+      "injection_point": "jblpc.protocol.parse_frames",
+      "raised": false,
+      "where_caught": "jblpc/protocol.py:236-237",
+      "user_message": "None (retains remainder buffer and awaits next packet)",
+      "exit_code": 0,
+      "status": "PASS"
+    },
+    {
+      "id": 12,
+      "scenario": "Bad checksum",
+      "exception_type": "ProtocolError",
+      "injection_point": "jblpc.protocol.parse_frames (verify_checksum_byte=True)",
+      "raised": true,
+      "where_caught": "jblpc/protocol.py:247, jblpc/cli.py:506",
+      "user_message": "\u2717 Error: Frame checksum mismatch: expected 0xXX, got 0xYY",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 13,
+      "scenario": "Unexpected response opcode",
+      "exception_type": "ProtocolError",
+      "injection_point": "jblpc.protocol.BluetoothConnection.send_and_receive",
+      "raised": true,
+      "where_caught": "jblpc/protocol.py:453, jblpc/cli.py:506",
+      "user_message": "\u2717 Error: Unexpected response opcode: expected 0xXXXX, got 0xYYYY",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 14,
+      "scenario": "Command unsupported by model",
+      "exception_type": "UnsupportedCommandError",
+      "injection_point": "jblpc.controller.HeadsetController capability guards",
+      "raised": false,
+      "where_caught": "jblpc/controller.py:276-291, 517-526",
+      "user_message": "\u2717 Error: ANC / Power off / Equalizer is not supported on <model>.",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 15,
+      "scenario": "Permission denied on socket",
+      "exception_type": "PermissionError",
+      "injection_point": "socket.socket / BluetoothConnection.connect",
+      "raised": true,
+      "where_caught": "jblpc/protocol.py:357, jblpc/controller.py:247",
+      "user_message": "\u2717 Error: Permission denied accessing Bluetooth socket: [Errno 13]",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 16,
+      "scenario": "Concurrent second instance",
+      "exception_type": "InstanceLockError",
+      "injection_point": "jblpc.lock.SingleInstanceLock.acquire",
+      "raised": true,
+      "where_caught": "jblpc/cli.py:508",
+      "user_message": "\u2717 Error: Another instance of JBLPc is already running (locked by ...).",
+      "exit_code": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 17,
+      "scenario": "KeyboardInterrupt (Ctrl+C)",
+      "exception_type": "KeyboardInterrupt",
+      "injection_point": "Top-level CLI execution loop",
+      "raised": true,
+      "where_caught": "jblpc/cli.py:498, jblpc/__main__.py:67",
+      "user_message": "Operation cancelled by user.",
+      "exit_code": 130,
+      "status": "PASS"
+    },
+    {
+      "id": 18,
+      "scenario": "SIGTERM handling",
+      "exception_type": "SIGTERM signal",
+      "injection_point": "Operating system process signal",
+      "raised": false,
+      "where_caught": "Python standard runtime signal handler",
+      "user_message": "Process terminated cleanly (exit code 143)",
+      "exit_code": 143,
+      "status": "PASS"
+    },
+    {
+      "id": 19,
+      "scenario": "Terminal too small for TUI",
+      "exception_type": "TerminalTooSmallError / Layout Notice",
+      "injection_point": "jblpc.tui.app.JBLPcApp.on_mount",
+      "raised": false,
+      "where_caught": "jblpc/tui/app.py:664-670",
+      "user_message": "Terminal size is small. Layout may be compressed. (TUI stays alive)",
+      "exit_code": 0,
+      "status": "PASS"
+    },
+    {
+      "id": 20,
+      "scenario": "Non-UTF8 device name",
+      "exception_type": "UnicodeDecodeError (prevented)",
+      "injection_point": "jblpc.protocol.find_jbl_devices",
+      "raised": false,
+      "where_caught": "jblpc/protocol.py:477, 494, 517, 536 (errors='replace')",
+      "user_message": "Replaces invalid byte sequences with Unicode replacement character U+FFFD",
+      "exit_code": 0,
+      "status": "PASS"
+    }
+  ]
+}

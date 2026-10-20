@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tunedeck"
+version = "0.2.0"
+description = "Linux terminal controller for JBL headphones, earbuds, and speakers"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "TuneDeck Contributors" }
+]
+dependencies = [
+    "textual>=0.50.0",
+    "rich>=13.0.0",
+    "platformdirs>=4.0.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]
+
+[project.scripts]
+tunedeck = "jblpc.__main__:main"
+jblpc = "jblpc.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["jblpc*"]
