@@ -44,6 +44,7 @@ from .models import (
     GENERIC_HEADPHONES,
 )
 from .exceptions import (
+    ConfigError,
     BluetoothAdapterError,
     DeviceNotPairedError,
     ConnectionError as JBLConnectionError,
