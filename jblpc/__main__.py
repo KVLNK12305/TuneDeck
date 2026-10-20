@@ -1,11 +1,12 @@
 """
-JBLPc entry point.
+TuneDeck entry point.
 
 Usage:
     python -m jblpc              # Launch TUI (default)
-    python -m jblpc --sim        # Launch TUI in simulation mode
-    python -m jblpc cli <cmd>    # CLI mode
-    python -m jblpc cli --sim <cmd>  # CLI simulation mode
+    tunedeck                     # Launch TUI
+    tunedeck --sim               # Launch TUI in simulation mode
+    tunedeck cli <cmd>           # CLI mode
+    tunedeck cli --sim <cmd>     # CLI simulation mode
 """
 
 import sys
@@ -49,10 +50,10 @@ def main():
             from rich.console import Console
             console = Console()
             console.print()
-            console.print("[bold #FF6600]🎧 JBLPc — Universal JBL Controller[/]")
+            console.print("[bold #FF6600]🎧 TuneDeck — Universal JBL Controller[/]")
             console.print()
             console.print("[yellow]No Bluetooth address configured.[/]")
-            console.print("[dim]Set it with: export JBL_BD=\"XX:XX:XX:XX:XX:XX\"[/]")
+            console.print("[dim]Set it with: export JBL_BD=\"XX:XX:XX:XX:XX:XX\" (or TUNEDECK_BD)[/]")
             console.print()
             console.print("[bold]Launching in [yellow]simulation mode[/bold] so you can explore the UI...[/]")
             console.print("[dim]Press Enter to continue...[/]")

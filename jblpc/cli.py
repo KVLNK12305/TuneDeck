@@ -629,9 +629,9 @@ def cmd_help():
 
     console.print(table)
     console.print()
-    console.print("[dim]Set your device address: export JBL_BD=\"XX:XX:XX:XX:XX:XX\"[/]")
-    console.print("[dim]Run simulation mode:     python -m jblpc cli --sim status[/]")
-    console.print("[dim]Simulate specific model: python -m jblpc cli --sim --model \"JBL Flip 6\" status[/]")
+    console.print("[dim]Set your device address: export JBL_BD=\"XX:XX:XX:XX:XX:XX\" (or TUNEDECK_BD)[/]")
+    console.print("[dim]Run simulation mode:     tunedeck cli --sim status[/]")
+    console.print("[dim]Simulate specific model: tunedeck cli --sim --model \"JBL Flip 6\" status[/]")
 
 
 def run_cli(args: list[str]) -> int:
@@ -727,7 +727,7 @@ def run_cli(args: list[str]) -> int:
             elif command == "diagnose":
                 return cmd_diagnose(controller)
             else:
-                console.print(f"[red]✗ Error:[/] Unknown command '{command}'. Run 'jblpc cli help' for available commands.")
+                console.print(f"[red]✗ Error:[/] Unknown command '{command}'. Run 'tunedeck cli help' for available commands.")
                 return 1
 
     except KeyboardInterrupt:
