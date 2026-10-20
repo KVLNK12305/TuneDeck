@@ -422,6 +422,47 @@ SUPPORTED_MODELS: list[DeviceProfile] = [
         eq_band_frequencies=["Bass", "Mid", "Treble"],
         has_lightshow=True,
     ),
+    DeviceProfile(
+        model_id="partybox_110",
+        display_name="JBL PartyBox 110",
+        name_patterns=[r"JBL\s*PARTYBOX\s*110", r"PARTYBOX\s*110"],
+        category=DeviceCategory.PARTYBOX,
+        protocol_family=ProtocolFamily.PARTYBOX,
+        has_anc=False,
+        has_ambient_aware=False,
+        has_talkthru=False,
+        eq_type=EQType.SPEAKER_3_BAND,
+        eq_band_frequencies=["Bass", "Mid", "Treble"],
+        has_lightshow=True,
+    ),
+    DeviceProfile(
+        model_id="partybox_stage_320",
+        display_name="JBL PartyBox Stage 320",
+        name_patterns=[r"JBL\s*PARTYBOX\s*STAGE\s*320", r"PARTYBOX\s*STAGE\s*320", r"STAGE\s*320"],
+        category=DeviceCategory.PARTYBOX,
+        protocol_family=ProtocolFamily.PARTYBOX,
+        has_anc=False,
+        has_ambient_aware=False,
+        has_talkthru=False,
+        eq_type=EQType.SPEAKER_3_BAND,
+        eq_band_frequencies=["Bass", "Mid", "Treble"],
+        has_auracast=True,
+        has_lightshow=True,
+    ),
+    DeviceProfile(
+        model_id="partybox_club_120",
+        display_name="JBL PartyBox Club 120",
+        name_patterns=[r"JBL\s*PARTYBOX\s*CLUB\s*120", r"PARTYBOX\s*CLUB\s*120", r"CLUB\s*120"],
+        category=DeviceCategory.PARTYBOX,
+        protocol_family=ProtocolFamily.PARTYBOX,
+        has_anc=False,
+        has_ambient_aware=False,
+        has_talkthru=False,
+        eq_type=EQType.SPEAKER_3_BAND,
+        eq_band_frequencies=["Bass", "Mid", "Treble"],
+        has_auracast=True,
+        has_lightshow=True,
+    ),
 ]
 
 # ─── Fallback Profiles for Unrecognized Models ──────────────────────────────
@@ -455,7 +496,7 @@ GENERIC_TWS = DeviceProfile(
 GENERIC_SPEAKER = DeviceProfile(
     model_id="generic_jbl_speaker",
     display_name="Generic JBL Speaker",
-    name_patterns=[r"JBL.*(FLIP|CHARGE|XTREME|BOOMBOX|CLIP|GO|PULSE)"],
+    name_patterns=[r"JBL.*(FLIP|CHARGE|XTREME|BOOMBOX|CLIP|GO|PULSE|PARTYBOX)"],
     category=DeviceCategory.SPEAKER,
     protocol_family=ProtocolFamily.JBL_PORTABLE,
     has_anc=False,
@@ -488,7 +529,7 @@ def match_device_profile(device_name: str) -> DeviceProfile:
     name_upper = device_name.upper()
     if any(k in name_upper for k in ["TWS", "BUDS", "BEAM", "FLEX", "WAVE", "VIBE", "EARBUDS"]):
         return GENERIC_TWS
-    if any(k in name_upper for k in ["FLIP", "CHARGE", "XTREME", "BOOMBOX", "CLIP", "GO", "PULSE", "SPEAKER"]):
+    if any(k in name_upper for k in ["FLIP", "CHARGE", "XTREME", "BOOMBOX", "CLIP", "GO", "PULSE", "SPEAKER", "PARTYBOX"]):
         return GENERIC_SPEAKER
     if "JBL" in name_upper:
         return GENERIC_HEADPHONES
