@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "=================================================="
-echo "🎧 JBLPc Test Suite & Verification Runner"
+echo "🎧 TuneDeck Test Suite & Verification Runner"
 echo "=================================================="
 
 # 1. Virtual Environment Setup
@@ -28,6 +28,7 @@ source .venv/bin/activate
 echo "Installing/verifying dependencies..."
 pip install --quiet --upgrade pip
 pip install --quiet -r requirements.txt
+pip install --quiet -e .
 
 # 3. Pytest Execution (Excludes real hardware by default)
 echo ""
