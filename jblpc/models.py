@@ -1,13 +1,13 @@
 """
 Device profile registry and model definitions for JBL devices.
 
-Enables JBLPc to support a wide spectrum of JBL devices (Tune, Live, Tour,
+Enables TuneDeck to support a wide spectrum of JBL devices (Tune, Live, Tour,
 Club, Wave/Vibe TWS, and Portable Speakers) through metadata profiles and
 intelligent matching, even without physical access to every model.
 """
 
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum
 import re
 from typing import Optional
 

@@ -318,6 +318,7 @@ class HeadsetController:
         if not self.state.connected or not self._connection:
             self.last_error = "Device is not connected."
             self._add_log(f"✗ {self.last_error}")
+            self._notify()
             return False
 
         payload = NOISE_SETTERS.get(mode)
@@ -526,6 +527,7 @@ class HeadsetController:
         if not self.state.connected or not self._connection:
             self.last_error = "Device is not connected."
             self._add_log(f"✗ {self.last_error}")
+            self._notify()
             return False
 
         payload = bytes([len(bands)] + [b & 0xFF for b in bands])

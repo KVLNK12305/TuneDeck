@@ -1,5 +1,5 @@
 """
-Single instance lock implementation for JBLPc.
+Single instance lock implementation for TuneDeck.
 
 Prevents concurrent second instance from corrupting device state or locking RFCOMM sockets.
 """
@@ -27,6 +27,7 @@ class SingleInstanceLock:
             lock_dir = base / "jblpc"
         self.lock_path = lock_dir / name
         self._file = None
+        self._cleanup_error: Optional[str] = None
 
     def acquire(self):
         """Acquire lock or raise InstanceLockError if another instance holds it."""
