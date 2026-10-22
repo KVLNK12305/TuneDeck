@@ -2,7 +2,9 @@
 Device status header bar with model switcher, connection toggles, and power-off.
 """
 
+from pathlib import Path
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
@@ -52,6 +54,16 @@ class DeviceBarWidget(QWidget):
         layout.setSpacing(14)
 
         # Brand / Logo
+        logo_path = Path(__file__).resolve().parent.parent / "assets" / "logo.png"
+        if logo_path.is_file():
+            logo_pix = QPixmap(str(logo_path)).scaled(
+                24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+            )
+            logo_img = QLabel()
+            logo_img.setPixmap(logo_pix)
+            logo_img.setToolTip("TuneDeck")
+            layout.addWidget(logo_img)
+
         logo_lbl = QLabel("TUNEDECK")
         logo_lbl.setStyleSheet(f"font-size: 15px; font-weight: 900; color: {COLOR_JBL_ORANGE}; letter-spacing: 1.5px;")
         layout.addWidget(logo_lbl)

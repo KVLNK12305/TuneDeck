@@ -46,8 +46,17 @@ from ..widgets import (
 from jblpc.protocol import NoiseMode, EQPreset
 
 
+from pathlib import Path
+
+
 def create_app_icon() -> QIcon:
-    """Generate a clean orange brand icon dynamically without emojis."""
+    """Generate or load the official TuneDeck brand icon."""
+    logo_path = Path(__file__).resolve().parent.parent / "assets" / "logo.png"
+    if logo_path.is_file():
+        icon = QIcon(str(logo_path))
+        if not icon.isNull():
+            return icon
+
     pix = QPixmap(64, 64)
     pix.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pix)

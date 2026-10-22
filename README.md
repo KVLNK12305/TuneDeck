@@ -1,4 +1,22 @@
-# 🎧 TuneDeck
+<p align="center">
+  <img src="assets/logo.png" alt="TuneDeck Logo" width="220">
+</p>
+
+<h1 align="center">TuneDeck</h1>
+
+<p align="center">
+  <em>headphones, from your shell</em>
+</p>
+
+<p align="center">
+  <a href="#-features-at-a-glance">Features</a> •
+  <a href="#-platform-support">Platform Support</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-supported-models">Supported Models</a> •
+  <a href="#-cli-reference">CLI Reference</a>
+</p>
+
+---
 
 > [!NOTE]
 > **Independent Open-Source Project**: TuneDeck is not affiliated with, sponsored by, or endorsed by JBL, Harman International Industries, or Samsung Electronics. All trademarks and brand names belong to their respective owners.
