@@ -72,15 +72,22 @@ class GuiControllerBridge(QObject):
                 addr = self.address or ""
                 if not addr and not self.simulate:
                     try:
-                        from jblpc.protocol import load_config, save_config, find_jbl_devices
-                        cfg = load_config()
-                        addr = cfg.get("bluetooth_address", "")
-                        if not addr:
-                            paired = find_jbl_devices()
-                            if paired and paired[0].get("address"):
-                                addr = paired[0]["address"]
+                        from jblpc.protocol import load_config, save_config, get_active_jbl_device
+                        active_dev = get_active_jbl_device()
+                        if active_dev and active_dev.get("address"):
+                            addr = active_dev["address"]
+                            if active_dev.get("connected"):
+                                cfg = load_config()
                                 cfg["bluetooth_address"] = addr
                                 save_config(cfg)
+                            if not self.sim_model and active_dev.get("name"):
+                                from jblpc.models import match_device_profile
+                                matched = match_device_profile(active_dev["name"])
+                                if matched:
+                                    self.sim_model = matched.display_name
+                        if not addr:
+                            cfg = load_config()
+                            addr = cfg.get("bluetooth_address", "")
                     except Exception as err:
                         pass_err = str(err)
                 self._controller = HeadsetController(

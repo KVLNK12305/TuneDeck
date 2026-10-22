@@ -497,15 +497,59 @@ class BluetoothConnection:
         return frames
 
 
+def is_jbl_device_name(name: str) -> bool:
+    """Check if a Bluetooth broadcast name belongs to a JBL device."""
+    if not name or not isinstance(name, str):
+        return False
+    u = name.upper()
+    if "JBL" in u:
+        return True
+    keywords = [
+        "TUNE", "LIVE", "TOUR", "FLIP", "CHARGE", "XTREME", "BOOMBOX",
+        "PULSE", "PARTYBOX", "ENDURANCE", "WAVE", "VIBE", "BEAM", "FLEX",
+        "REFLECT", "QUANTUM", "CLUB", "EVEREST", "UNDER ARMOUR", "770", "760", "720", "710", "670", "660", "520", "510"
+    ]
+    return any(k in u for k in keywords)
+
+
+HARMAN_VENDOR_REGEX = re.compile(r"Modalias:\s*bluetooth:v(0ECB|0057)", re.IGNORECASE)
+AIROHA_RACE_UUID = "5052494d-2dab-0341-6972-6f6861424c45"
+
+
+def is_harman_jbl_info(info_stdout: str) -> tuple[bool, str]:
+    """
+    Examines bluetoothctl info output.
+    Returns (is_jbl, hardware_name).
+    Identifies JBL devices via Harman Bluetooth SIG Vendor ID (0x0ECB / 0x0057),
+    Airoha RACE protocol UUID, or factory hardware broadcast Name.
+    """
+    if not info_stdout:
+        return False, ""
+
+    m_name = re.search(r"^\s*Name:\s*(.+)$", info_stdout, re.MULTILINE)
+    hw_name = m_name.group(1).strip() if m_name else ""
+    m_alias = re.search(r"^\s*Alias:\s*(.+)$", info_stdout, re.MULTILINE)
+    alias = m_alias.group(1).strip() if m_alias else ""
+
+    if HARMAN_VENDOR_REGEX.search(info_stdout):
+        return True, hw_name or alias
+    if AIROHA_RACE_UUID in info_stdout.lower():
+        return True, hw_name or alias
+    if is_jbl_device_name(hw_name) or is_jbl_device_name(alias):
+        return True, hw_name or alias
+
+    return False, hw_name or alias
+
+
 def find_windows_jbl_devices() -> list[dict]:
-    """Discover paired JBL devices on Windows via PowerShell."""
+    """Discover paired and connected JBL devices on Windows via PowerShell."""
     devices = []
     try:
         cmd = [
             "powershell.exe", "-NoProfile", "-Command",
             "Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue | "
-            "Where-Object { $_.FriendlyName -match 'JBL|770|Live|Tour|Flip|Charge|Pulse|PartyBox' } | "
-            "Select-Object FriendlyName, InstanceId | ConvertTo-Json"
+            "Where-Object { $_.FriendlyName -match 'JBL|Tune|Live|Tour|Flip|Charge|Pulse|PartyBox|Xtreme|Boombox|Endurance|Wave|Vibe|Beam|Flex|770' -or $_.InstanceId -match '0ECB|0057' } | "
+            "Select-Object FriendlyName, InstanceId, Status | ConvertTo-Json"
         ]
         res = subprocess.run(cmd, capture_output=True, timeout=5, text=True)
         if res.returncode == 0 and res.stdout.strip():
@@ -514,20 +558,25 @@ def find_windows_jbl_devices() -> list[dict]:
             for item in items:
                 name = item.get("FriendlyName", "").strip()
                 inst_id = item.get("InstanceId", "")
+                is_harman_id = bool(re.search(r"0ECB|0057", inst_id, re.IGNORECASE))
+                if not (is_jbl_device_name(name) or is_harman_id):
+                    continue
+                status = item.get("Status", "")
                 match = re.search(r"DEV_([0-9A-Fa-f]{12})", inst_id)
+                formatted_mac = ""
                 if match:
                     raw_mac = match.group(1).upper()
                     formatted_mac = ":".join(raw_mac[i:i+2] for i in range(0, 12, 2))
-                    devices.append({"address": formatted_mac, "name": name})
-                elif name:
-                    devices.append({"address": "", "name": name})
-    except Exception as err:
+                is_conn = (status == "OK")
+                devices.append({"address": formatted_mac, "name": name, "connected": is_conn})
+    except Exception:
         devices = []
+    devices.sort(key=lambda d: (0 if d.get("connected") else 1, d.get("name", "")))
     return devices
 
 
 def find_macos_jbl_devices() -> list[dict]:
-    """Discover paired JBL devices on macOS via system_profiler."""
+    """Discover paired and connected JBL devices on macOS via system_profiler."""
     devices = []
     try:
         res = subprocess.run(
@@ -540,30 +589,26 @@ def find_macos_jbl_devices() -> list[dict]:
             bt_items = data.get("SPBluetoothDataType", [{}])
             if bt_items:
                 bt_data = bt_items[0]
-                raw_devices = []
-                if "devices_list" in bt_data:
-                    raw_devices = bt_data["devices_list"]
-                else:
-                    for k in ("device_connected", "device_not_connected"):
-                        sub = bt_data.get(k, [])
-                        if isinstance(sub, list):
-                            raw_devices.extend(sub)
-                        elif isinstance(sub, dict):
-                            for dev_name, info in sub.items():
-                                raw_devices.append({dev_name: info})
-
-                for item in raw_devices:
-                    if isinstance(item, dict):
-                        for dev_name, dev_info in item.items():
-                            upper = dev_name.upper()
-                            if any(kw in upper for kw in ("JBL", "770", "LIVE", "TOUR", "FLIP", "CHARGE", "PULSE", "PARTYBOX")):
-                                addr = ""
+                for conn_key, is_conn in [("device_connected", True), ("device_not_connected", False)]:
+                    sub = bt_data.get(conn_key, [])
+                    raw_items = sub if isinstance(sub, list) else ([sub] if isinstance(sub, dict) else [])
+                    for entry in raw_items:
+                        if isinstance(entry, dict):
+                            for dev_name, dev_info in entry.items():
+                                is_mfr_harman = False
                                 if isinstance(dev_info, dict):
-                                    addr = dev_info.get("device_address", "") or dev_info.get("device_mac", "")
-                                addr = addr.replace("-", ":").upper()
-                                devices.append({"address": addr, "name": dev_name})
-    except Exception as err:
+                                    mfr = str(dev_info.get("device_manufacturer", "")).lower()
+                                    if "harman" in mfr or "0x0ecb" in mfr or "0x0057" in mfr:
+                                        is_mfr_harman = True
+                                if is_jbl_device_name(dev_name) or is_mfr_harman:
+                                    addr = ""
+                                    if isinstance(dev_info, dict):
+                                        addr = dev_info.get("device_address", "") or dev_info.get("device_mac", "")
+                                    addr = addr.replace("-", ":").upper()
+                                    devices.append({"address": addr, "name": dev_name, "connected": is_conn})
+    except Exception:
         devices = []
+    devices.sort(key=lambda d: (0 if d.get("connected") else 1, d.get("name", "")))
     return devices
 
 
@@ -603,7 +648,7 @@ def check_bluetooth_adapter_powered():
                 return
             except Exception as e:
                 raise BluetoothAdapterError("Bluetooth adapter is powered off or missing.") from e
-        return
+            return
     elif sys.platform == "darwin":
         try:
             res = subprocess.run(["system_profiler", "SPBluetoothDataType", "-json"],
@@ -635,7 +680,7 @@ def check_bluetooth_adapter_powered():
 
 
 def find_jbl_devices() -> list[dict]:
-    """Discover paired JBL devices across platforms."""
+    """Discover paired and connected JBL devices across platforms."""
     if sys.platform == "win32":
         return find_windows_jbl_devices()
     elif sys.platform == "darwin":
@@ -644,22 +689,107 @@ def find_jbl_devices() -> list[dict]:
     # Linux (BlueZ / bluetoothctl)
     check_bluetoothctl_available()
     devices = []
+    seen = set()
     try:
+        # 1. Query currently connected devices first
+        connected_macs = set()
+        try:
+            conn_res = subprocess.run(
+                ["bluetoothctl", "devices", "Connected"],
+                capture_output=True,
+                timeout=3
+            )
+            conn_stdout = conn_res.stdout.decode("utf-8", errors="replace")
+            for cline in conn_stdout.splitlines():
+                cm = re.match(r"Device\s+([0-9A-Fa-f:]{17})\s*(.*)", cline)
+                if cm:
+                    c_addr = cm.group(1).upper()
+                    c_name = cm.group(2).strip()
+                    connected_macs.add(c_addr)
+                    # For connected devices, verify JBL identity via name or hardware vendor signature
+                    if is_jbl_device_name(c_name):
+                        seen.add(c_addr)
+                        devices.append({"address": cm.group(1), "name": c_name, "connected": True})
+                    else:
+                        # Check bluetoothctl info for Harman signature even if device was renamed by user
+                        try:
+                            info_res = subprocess.run(["bluetoothctl", "info", cm.group(1)], capture_output=True, timeout=2)
+                            is_jbl, true_name = is_harman_jbl_info(info_res.stdout.decode("utf-8", errors="replace"))
+                            if is_jbl:
+                                seen.add(c_addr)
+                                devices.append({"address": cm.group(1), "name": true_name or c_name, "connected": True})
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+        # 2. Query all known/paired Bluetooth devices
         result = subprocess.run(
             ["bluetoothctl", "devices"],
             capture_output=True,
             timeout=5
         )
         stdout = result.stdout.decode("utf-8", errors="replace")
+
         for line in stdout.splitlines():
             match = re.match(r"Device\s+([0-9A-Fa-f:]{17})\s+(.+)", line)
             if match:
                 addr, name = match.groups()
-                if "JBL" in name.upper() or "770" in name:
-                    devices.append({"address": addr, "name": name.strip()})
+                addr_upper = addr.upper()
+                if addr_upper in seen:
+                    continue
+                name_clean = name.strip()
+                is_conn = (addr_upper in connected_macs)
+                if is_jbl_device_name(name_clean):
+                    seen.add(addr_upper)
+                    devices.append({"address": addr, "name": name_clean, "connected": is_conn})
+                elif is_conn:
+                    # Check info for renamed connected device
+                    try:
+                        info_res = subprocess.run(["bluetoothctl", "info", addr], capture_output=True, timeout=2)
+                        is_jbl, true_name = is_harman_jbl_info(info_res.stdout.decode("utf-8", errors="replace"))
+                        if is_jbl:
+                            seen.add(addr_upper)
+                            devices.append({"address": addr, "name": true_name or name_clean, "connected": True})
+                    except Exception:
+                        pass
     except subprocess.TimeoutExpired:
         raise BluetoothAdapterError("bluetoothctl timed out while listing devices.")
+
+    # Sort: currently connected devices first, then alphabetically
+    devices.sort(key=lambda d: (0 if d.get("connected") else 1, d.get("name", "")))
     return devices
+
+
+def get_active_jbl_device() -> Optional[dict]:
+    """
+    Find the currently active JBL device.
+    Prioritizes any currently CONNECTED JBL device at runtime.
+    If none is currently connected, falls back to the configured address
+    or first paired JBL device.
+    """
+    devices = find_jbl_devices()
+    if not devices:
+        return None
+
+    # 1. Any currently connected device comes first
+    for dev in devices:
+        if dev.get("connected"):
+            return dev
+
+    # 2. Check if a previously configured device is available among paired devices
+    try:
+        cfg = load_config()
+        saved_mac = cfg.get("bluetooth_address", "").strip().upper()
+        if saved_mac:
+            for dev in devices:
+                if dev.get("address", "").upper() == saved_mac:
+                    return dev
+    except Exception:
+        pass
+
+    # 3. Default to first paired JBL device
+    return devices[0]
 
 
 def check_device_connected(address: str) -> bool:

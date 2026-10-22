@@ -53,24 +53,28 @@ def main():
     # TUI mode (default)
     try:
         config = load_config()
-        bt_address = config.get("bluetooth_address", "")
+        bt_address = None
 
-        # Auto-discover paired JBL device if not set
-        if not bt_address and not simulate:
+        # Dynamically discover active JBL device at runtime (no hardcoded MACs)
+        if not simulate:
             try:
-                from .protocol import find_jbl_devices, save_config
+                from .protocol import get_active_jbl_device, save_config
                 from .models import match_device_profile
-                paired = find_jbl_devices()
-                if paired and paired[0].get("address"):
-                    bt_address = paired[0]["address"]
-                    config["bluetooth_address"] = bt_address
-                    save_config(config)
-                    if not model_name and paired[0].get("name"):
-                        matched = match_device_profile(paired[0]["name"])
+                active_dev = get_active_jbl_device()
+                if active_dev and active_dev.get("address"):
+                    bt_address = active_dev["address"]
+                    if active_dev.get("connected"):
+                        config["bluetooth_address"] = bt_address
+                        save_config(config)
+                    if not model_name and active_dev.get("name"):
+                        matched = match_device_profile(active_dev["name"])
                         if matched:
                             model_name = matched.model_id
-            except Exception as err:
-                pass_err = str(err)
+            except Exception:
+                pass
+
+        if not bt_address:
+            bt_address = config.get("bluetooth_address", "")
 
         controller = HeadsetController(bt_address=bt_address, simulate=simulate, model=model_name)
 

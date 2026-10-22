@@ -29,6 +29,7 @@ from .protocol import (
     load_config,
     save_config,
     find_jbl_devices,
+    get_active_jbl_device,
     check_device_connected,
     check_device_paired,
     check_bluetooth_adapter_powered,
@@ -113,16 +114,50 @@ class HeadsetController:
 
     def __init__(
         self,
-        bt_address: str = "",
+        bt_address: Optional[str] = None,
         simulate: bool = False,
         model: Optional[str] = None,
         model_id: Optional[str] = None,
         connection: Optional[BluetoothConnection] = None,
     ):
         model_name = model or model_id
+        explicit_empty = (bt_address == "")
+
+        # 1. Dynamic active JBL device discovery (no hardcoded MACs)
+        active_dev = None
+        if not simulate and not explicit_empty:
+            try:
+                active_dev = get_active_jbl_device()
+                # Prioritize currently connected JBL device over static/cached address
+                if active_dev and active_dev.get("connected"):
+                    bt_address = active_dev["address"]
+                    if not model_name and active_dev.get("name"):
+                        model_name = active_dev["name"]
+                elif not bt_address and active_dev and active_dev.get("address"):
+                    bt_address = active_dev["address"]
+                    if not model_name and active_dev.get("name"):
+                        model_name = active_dev["name"]
+            except Exception:
+                pass
+
+        if bt_address is None:
+            bt_address = ""
+
+        # 2. If address given but no model name, check paired list to resolve model
+        if not model_name and bt_address and not simulate:
+            try:
+                for dev in find_jbl_devices():
+                    if dev.get("address", "").upper() == bt_address.upper():
+                        model_name = dev.get("name", "")
+                        break
+            except Exception:
+                pass
+
         profile = None
         if model_name:
             profile = get_profile_by_id(model_name) or match_device_profile(model_name)
+        elif active_dev and active_dev.get("name"):
+            profile = match_device_profile(active_dev["name"])
         else:
             profile = SUPPORTED_MODELS[0]
 
@@ -265,6 +300,16 @@ class HeadsetController:
         if success:
             self.state.connected = True
             self._add_log("✓ RFCOMM connection established")
+            # Update device profile dynamically from device broadcast name if available
+            try:
+                for dev in find_jbl_devices():
+                    if dev.get("address", "").upper() == self.state.bt_address.upper():
+                        matched = match_device_profile(dev.get("name", ""))
+                        if matched and matched.model_id != self.state.profile.model_id:
+                            self.set_profile(matched)
+                        break
+            except Exception:
+                pass
             # Drain initial unsolicited frames (headset pushes initial noise status immediately on connect)
             try:
                 init_frames = self._connection.receive(timeout=0.8)
