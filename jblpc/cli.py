@@ -140,6 +140,10 @@ def cmd_models(controller: HeadsetController) -> int:
 
 def cmd_anc(controller: HeadsetController) -> int:
     """Enable ANC."""
+    p = controller.state.profile
+    if not p.has_anc:
+        console.print(f"[red]✗ Error:[/] Active Noise Cancellation is not supported on {p.display_name}.")
+        return 1
     if not controller.connect():
         console.print(f"[red]✗ Error:[/] {controller.last_error or 'Could not connect'}")
         return 1
@@ -152,6 +156,10 @@ def cmd_anc(controller: HeadsetController) -> int:
 
 def cmd_ambient(controller: HeadsetController) -> int:
     """Enable Ambient Aware."""
+    p = controller.state.profile
+    if not p.has_ambient_aware:
+        console.print(f"[red]✗ Error:[/] Ambient Aware is not supported on {p.display_name}.")
+        return 1
     if not controller.connect():
         console.print(f"[red]✗ Error:[/] {controller.last_error or 'Could not connect'}")
         return 1
@@ -164,6 +172,10 @@ def cmd_ambient(controller: HeadsetController) -> int:
 
 def cmd_talkthru(controller: HeadsetController) -> int:
     """Enable TalkThru."""
+    p = controller.state.profile
+    if not p.has_talkthru:
+        console.print(f"[red]✗ Error:[/] TalkThru is not supported on {p.display_name}.")
+        return 1
     if not controller.connect():
         console.print(f"[red]✗ Error:[/] {controller.last_error or 'Could not connect'}")
         return 1
@@ -176,6 +188,10 @@ def cmd_talkthru(controller: HeadsetController) -> int:
 
 def cmd_noiseoff(controller: HeadsetController) -> int:
     """Disable noise control."""
+    p = controller.state.profile
+    if not (p.has_anc or p.has_ambient_aware or p.has_talkthru):
+        console.print(f"[red]✗ Error:[/] Noise control is not supported on {p.display_name}.")
+        return 1
     if not controller.connect():
         console.print(f"[red]✗ Error:[/] {controller.last_error or 'Could not connect'}")
         return 1
@@ -213,6 +229,10 @@ def cmd_battery(controller: HeadsetController) -> int:
 
 def cmd_poweroff(controller: HeadsetController) -> int:
     """Power off headset."""
+    p = controller.state.profile
+    if not p.has_power_off_command:
+        console.print(f"[red]✗ Error:[/] Remote power-off is not supported on {p.display_name} (earbuds power off automatically in charging case).")
+        return 1
     if not controller.connect():
         console.print(f"[red]✗ Error:[/] {controller.last_error or 'Could not connect'}")
         return 1
@@ -692,21 +712,24 @@ def run_cli(args: list[str]) -> int:
 
         # Load config safely
         config = load_config()
-        bt_address = config.get("bluetooth_address", "")
-        if not bt_address and not simulate:
+        bt_address = None
+
+        if not simulate:
             try:
-                paired = find_jbl_devices()
-                if paired and paired[0].get("address"):
-                    bt_address = paired[0]["address"]
-                    config["bluetooth_address"] = bt_address
-                    save_config(config)
-                    if not model_name and paired[0].get("name"):
-                        from .models import match_device_profile
-                        matched = match_device_profile(paired[0]["name"])
+                from .protocol import get_active_jbl_device
+                from .models import match_device_profile
+                active_dev = get_active_jbl_device()
+                if active_dev and active_dev.get("address"):
+                    bt_address = active_dev["address"]
+                    if not model_name and active_dev.get("name"):
+                        matched = match_device_profile(active_dev["name"])
                         if matched:
                             model_name = matched.model_id
-            except Exception as err:
-                pass_err = str(err)
+            except Exception:
+                pass
+
+        if not bt_address:
+            bt_address = config.get("bluetooth_address", "")
 
         with SingleInstanceLock():
             controller = HeadsetController(

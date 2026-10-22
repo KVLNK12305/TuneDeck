@@ -123,7 +123,7 @@ class BatteryWidget(Static):
 
 
 class NoiseControlWidget(Static):
-    """Noise control mode selector."""
+    """Noise control mode selector with strict capability gating per model."""
 
     current_mode: reactive[NoiseMode] = reactive(NoiseMode.OFF)
 
@@ -133,22 +133,47 @@ class NoiseControlWidget(Static):
 
     def compose(self) -> ComposeResult:
         yield Static(id="noise-header")
-        if self.controller.state.profile.has_anc:
-            with Horizontal(id="noise-buttons"):
-                yield Button("OFF", id="noise-off", variant="default")
-                yield Button("ANC", id="noise-anc", variant="default")
-                if self.controller.state.profile.has_ambient_aware:
-                    yield Button("AMBIENT", id="noise-ambient", variant="default")
-                if self.controller.state.profile.has_talkthru:
-                    yield Button("TALK", id="noise-talk", variant="default")
-        else:
-            yield Static("[dim italic]  Active noise cancellation is not supported on this model.[/]", id="noise-unsupported")
+        with Horizontal(id="noise-buttons"):
+            yield Button("OFF", id="noise-off", variant="default")
+            yield Button("ANC", id="noise-anc", variant="default")
+            yield Button("AMBIENT", id="noise-ambient", variant="default")
+            yield Button("TALK", id="noise-talk", variant="default")
+        yield Static("[dim italic]  Active noise cancellation is not supported on this model.[/]", id="noise-unsupported")
 
     def on_mount(self):
+        self.update_capabilities(self.controller.state.profile)
+
+    def update_capabilities(self, profile):
+        """Update visible noise mode buttons based on hardware capabilities."""
+        try:
+            btn_box = self.query_one("#noise-buttons", Horizontal)
+            unsupported = self.query_one("#noise-unsupported", Static)
+            btn_off = self.query_one("#noise-off", Button)
+            btn_anc = self.query_one("#noise-anc", Button)
+            btn_ambient = self.query_one("#noise-ambient", Button)
+            btn_talk = self.query_one("#noise-talk", Button)
+        except NoMatches:
+            return
+
+        if not profile.has_anc:
+            btn_box.display = False
+            unsupported.display = True
+        else:
+            btn_box.display = True
+            unsupported.display = False
+            btn_off.display = True
+            btn_anc.display = True
+            btn_ambient.display = profile.has_ambient_aware
+            btn_talk.display = profile.has_talkthru
+
         self._update_header()
+        self._highlight_active(self.current_mode)
 
     def _update_header(self):
-        header = self.query_one("#noise-header", Static)
+        try:
+            header = self.query_one("#noise-header", Static)
+        except NoMatches:
+            return
         if not self.controller.state.profile.has_anc:
             header.update(Text.from_markup(
                 "[bold #FF6600]🔇 NOISE CONTROL[/]  [dim]» Not supported[/]"
@@ -181,6 +206,7 @@ class NoiseControlWidget(Static):
                 pass
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        p = self.controller.state.profile
         mode_map = {
             "noise-off": NoiseMode.OFF,
             "noise-anc": NoiseMode.ANC,
@@ -188,9 +214,19 @@ class NoiseControlWidget(Static):
             "noise-talk": NoiseMode.TALKTHRU,
         }
         mode = mode_map.get(event.button.id)
-        if mode is not None:
-            self.controller.set_noise_mode(mode)
-            self.current_mode = mode
+        if mode is None:
+            return
+
+        # Double check model compatibility
+        if mode == NoiseMode.ANC and not p.has_anc:
+            return
+        if mode == NoiseMode.AMBIENT_AWARE and not p.has_ambient_aware:
+            return
+        if mode == NoiseMode.TALKTHRU and not p.has_talkthru:
+            return
+
+        self.controller.set_noise_mode(mode)
+        self.current_mode = mode
 
 
 class EQBandSlider(Static):
@@ -275,7 +311,7 @@ class EQBandSlider(Static):
 
 
 class EQWidget(Static):
-    """Adaptive graphical equalizer (3-band, 5-band, 10-band)."""
+    """Adaptive graphical equalizer (3-band, 5-band, 10-band) with capability gating."""
 
     selected_band: reactive[int] = reactive(0)
 
@@ -287,52 +323,96 @@ class EQWidget(Static):
 
     def compose(self) -> ComposeResult:
         yield Static(id="eq-header")
-        freqs = self.controller.state.profile.eq_band_frequencies
-        if freqs:
-            with Horizontal(id="eq-bands-container"):
-                for i, freq in enumerate(freqs):
-                    band = EQBandSlider(i, freq, self.controller, id=f"eq-band-{i}")
-                    self.bands.append(band)
-                    yield band
-            yield Static(id="eq-presets-label")
-            with Horizontal(id="eq-preset-buttons"):
-                yield Button("Flat", id="eq-flat", variant="default")
-                yield Button("Jazz", id="eq-jazz", variant="default")
-                yield Button("Vocal", id="eq-vocal", variant="default")
-                yield Button("Bass", id="eq-bass", variant="default")
-                yield Button("Club", id="eq-club", variant="default")
-        else:
-            yield Static("[dim italic]  Equalizer tuning is not supported on this model.[/]", id="eq-unsupported")
+        self.bands = []
+        with Horizontal(id="eq-bands-container"):
+            for i in range(10):
+                band = EQBandSlider(i, f"B{i+1}", self.controller, id=f"eq-band-{i}")
+                self.bands.append(band)
+                yield band
+        yield Static(id="eq-presets-label")
+        with Horizontal(id="eq-preset-buttons"):
+            yield Button("Flat", id="eq-flat", variant="default")
+            yield Button("Jazz", id="eq-jazz", variant="default")
+            yield Button("Vocal", id="eq-vocal", variant="default")
+            yield Button("Bass", id="eq-bass", variant="default")
+            yield Button("Club", id="eq-club", variant="default")
+        yield Static("[dim italic]  Equalizer tuning is not supported on this model.[/]", id="eq-unsupported")
 
     def on_mount(self):
+        self._update_presets_label()
+        self.update_capabilities(self.controller.state.profile)
+
+    def update_capabilities(self, profile):
+        """Update visible EQ band sliders and presets per model capability."""
+        freqs = profile.eq_band_frequencies
+        has_eq = (profile.eq_type.value != "none" and bool(freqs))
+
+        try:
+            bands_container = self.query_one("#eq-bands-container", Horizontal)
+            presets_label = self.query_one("#eq-presets-label", Static)
+            presets_box = self.query_one("#eq-preset-buttons", Horizontal)
+            unsupported = self.query_one("#eq-unsupported", Static)
+        except NoMatches:
+            return
+
+        if not has_eq:
+            bands_container.display = False
+            presets_label.display = False
+            presets_box.display = False
+            unsupported.display = True
+        else:
+            bands_container.display = True
+            unsupported.display = False
+            presets_label.display = bool(profile.eq_presets)
+            presets_box.display = bool(profile.eq_presets)
+
+            num_bands = len(freqs)
+            for i, band in enumerate(self.bands):
+                if i < num_bands:
+                    band.display = True
+                    band.freq_label = freqs[i]
+                    band._render_bar()
+                else:
+                    band.display = False
+
+            if self.selected_band >= num_bands:
+                self.selected_band = max(0, num_bands - 1)
+            for i, band in enumerate(self.bands):
+                if i < num_bands:
+                    band.is_selected = (i == self.selected_band)
+                else:
+                    band.is_selected = False
+
         self._update_header()
-        if self.controller.state.profile.eq_band_frequencies:
-            self._update_presets_label()
-            if self.bands:
-                self.bands[0].is_selected = True
 
     def select_band(self, index: int) -> int:
         """Select active EQ band slider."""
-        if not self.bands:
+        freqs = self.controller.state.profile.eq_band_frequencies
+        num_bands = len(freqs)
+        if not self.bands or num_bands == 0:
             return 0
-        new_index = max(0, min(len(self.bands) - 1, index))
+        new_index = max(0, min(num_bands - 1, index))
         self.selected_band = new_index
         for i, band in enumerate(self.bands):
-            band.is_selected = (i == new_index)
+            band.is_selected = (i == new_index and i < num_bands)
         self._update_header()
         return self.selected_band
 
     def adjust_selected_band(self, delta: int) -> int:
         """Adjust gain of selected EQ band slider."""
-        if not self.bands or not (0 <= self.selected_band < len(self.bands)):
+        num_bands = len(self.controller.state.profile.eq_band_frequencies)
+        if not self.bands or not (0 <= self.selected_band < min(len(self.bands), num_bands)):
             return 0
         self.bands[self.selected_band].adjust(delta)
         self._update_header()
         return self.bands[self.selected_band].value
 
     def _update_header(self):
-        header = self.query_one("#eq-header", Static)
-        if not self.controller.state.profile.eq_band_frequencies:
+        try:
+            header = self.query_one("#eq-header", Static)
+        except NoMatches:
+            return
+        if not self.controller.state.profile.eq_band_frequencies or self.controller.state.profile.eq_type.value == "none":
             header.update(Text.from_markup(
                 "[bold #FF6600]🎚️ EQUALIZER[/]  [dim]» Not supported[/]"
             ))
@@ -355,11 +435,15 @@ class EQWidget(Static):
 
     def update_bands(self, band_values: list[int]):
         """Update all band sliders from a list of values."""
+        num_bands = len(self.controller.state.profile.eq_band_frequencies)
         for i, band in enumerate(self.bands):
-            if i < len(band_values):
+            if i < num_bands and i < len(band_values):
                 band.value = band_values[i]
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        p = self.controller.state.profile
+        if p.eq_type.value == "none" or not p.eq_band_frequencies:
+            return
         preset_map = {
             "eq-flat": EQPreset.FLAT,
             "eq-jazz": EQPreset.JAZZ,
@@ -373,10 +457,10 @@ class EQWidget(Static):
             self.update_bands(self.controller.state.eq_bands)
             self._update_header()
             # Highlight active preset
-            for pid, p in preset_map.items():
+            for pid, p_val in preset_map.items():
                 try:
                     btn = self.query_one(f"#{pid}", Button)
-                    btn.variant = "warning" if p == preset else "default"
+                    btn.variant = "warning" if p_val == preset else "default"
                 except NoMatches:
                     pass
 
@@ -773,13 +857,21 @@ class JBLPcApp(App):
             pass
 
         try:
+            power_btn = self.query_one("#btn-poweroff", Button)
+            power_btn.display = state.profile.has_power_off_command
+        except NoMatches:
+            pass
+
+        try:
             noise_widget = self.query_one(NoiseControlWidget)
+            noise_widget.update_capabilities(state.profile)
             noise_widget.current_mode = state.noise_mode
         except NoMatches:
             pass
 
         try:
             eq_widget = self.query_one(EQWidget)
+            eq_widget.update_capabilities(state.profile)
             eq_widget.update_bands(state.eq_bands)
         except NoMatches:
             pass
@@ -845,6 +937,9 @@ class JBLPcApp(App):
                 self.controller._add_log("🔍 No JBL devices found (is BT on?)")
             self._update_all()
         elif btn_id == "btn-poweroff":
+            if not self.controller.state.profile.has_power_off_command:
+                self.notify("Power off is not supported on this model.", severity="warning")
+                return
             self.controller.power_off()
         elif btn_id == "btn-simulate":
             self.action_toggle_simulation()
@@ -858,6 +953,10 @@ class JBLPcApp(App):
         self.controller.disconnect()
 
     def action_eq_gain_up(self):
+        p = self.controller.state.profile
+        if p.eq_type.value == "none" or not p.eq_band_frequencies:
+            self.notify("Equalizer is not supported on this model.", severity="warning")
+            return
         try:
             eq = self.query_one(EQWidget)
             eq.adjust_selected_band(1)
@@ -865,6 +964,10 @@ class JBLPcApp(App):
             pass
 
     def action_eq_gain_down(self):
+        p = self.controller.state.profile
+        if p.eq_type.value == "none" or not p.eq_band_frequencies:
+            self.notify("Equalizer is not supported on this model.", severity="warning")
+            return
         try:
             eq = self.query_one(EQWidget)
             eq.adjust_selected_band(-1)
@@ -872,6 +975,10 @@ class JBLPcApp(App):
             pass
 
     def action_eq_band_prev(self):
+        p = self.controller.state.profile
+        if p.eq_type.value == "none" or not p.eq_band_frequencies:
+            self.notify("Equalizer is not supported on this model.", severity="warning")
+            return
         try:
             eq = self.query_one(EQWidget)
             eq.select_band(eq.selected_band - 1)
@@ -879,6 +986,10 @@ class JBLPcApp(App):
             pass
 
     def action_eq_band_next(self):
+        p = self.controller.state.profile
+        if p.eq_type.value == "none" or not p.eq_band_frequencies:
+            self.notify("Equalizer is not supported on this model.", severity="warning")
+            return
         try:
             eq = self.query_one(EQWidget)
             eq.select_band(eq.selected_band + 1)
@@ -886,6 +997,10 @@ class JBLPcApp(App):
             pass
 
     def action_save_eq(self):
+        p = self.controller.state.profile
+        if p.eq_type.value == "none" or not p.eq_band_frequencies:
+            self.notify("Equalizer is not supported on this model.", severity="warning")
+            return
         success = self.controller.save_eq_to_config()
         if success:
             self.notify("Equalizer settings saved to config.json", title="EQ Saved", severity="information")
@@ -894,27 +1009,50 @@ class JBLPcApp(App):
         self._update_all()
 
     def action_cycle_noise(self):
+        if not self.controller.state.profile.has_anc:
+            self.notify("Noise control is not supported on this model.", severity="warning")
+            return
         self.controller.cycle_noise_mode()
 
     def action_cycle_eq(self):
+        p = self.controller.state.profile
+        if p.eq_type.value == "none" or not p.eq_band_frequencies:
+            self.notify("Equalizer is not supported on this model.", severity="warning")
+            return
         self.controller.cycle_eq_preset()
 
     def action_noise_off(self):
+        p = self.controller.state.profile
+        if not (p.has_anc or p.has_ambient_aware or p.has_talkthru):
+            self.notify("Noise control is not supported on this model.", severity="warning")
+            return
         self.controller.set_noise_mode(NoiseMode.OFF)
 
     def action_noise_anc(self):
+        if not self.controller.state.profile.has_anc:
+            self.notify("Active Noise Cancellation is not supported on this model.", severity="warning")
+            return
         self.controller.set_noise_mode(NoiseMode.ANC)
 
     def action_noise_ambient(self):
+        if not self.controller.state.profile.has_ambient_aware:
+            self.notify("Ambient Aware is not supported on this model.", severity="warning")
+            return
         self.controller.set_noise_mode(NoiseMode.AMBIENT_AWARE)
 
     def action_noise_talkthru(self):
+        if not self.controller.state.profile.has_talkthru:
+            self.notify("TalkThru is not supported on this model.", severity="warning")
+            return
         self.controller.set_noise_mode(NoiseMode.TALKTHRU)
 
     def action_check_battery(self):
         self.controller.get_battery()
 
     def action_power_off(self):
+        if not self.controller.state.profile.has_power_off_command:
+            self.notify("Remote power-off is not supported on this model.", severity="warning")
+            return
         self.controller.power_off()
 
     def action_refresh(self):

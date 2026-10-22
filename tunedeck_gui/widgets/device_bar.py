@@ -140,3 +140,6 @@ class DeviceBarWidget(QWidget):
             self.model_combo.blockSignals(True)
             self.model_combo.setCurrentIndex(idx)
             self.model_combo.blockSignals(False)
+        from jblpc.models import match_device_profile
+        p = match_device_profile(model_name)
+        self.power_btn.setVisible(p.has_power_off_command)

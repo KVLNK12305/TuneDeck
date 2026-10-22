@@ -75,7 +75,14 @@ class NoiseControlWidget(QWidget):
         self._current_mode = state.noise_mode
         self.active_mode_lbl.setText(state.noise_mode_name)
 
-        # Capability checks
+        if not profile.has_anc:
+            for btn in self.buttons.values():
+                btn.setVisible(False)
+                btn.setEnabled(False)
+            self.active_mode_lbl.setText("Not Supported")
+            return
+
+        # Capability checks: only show supported options
         capabilities = {
             NoiseMode.ANC: profile.has_anc,
             NoiseMode.AMBIENT_AWARE: profile.has_ambient_aware,
@@ -85,6 +92,7 @@ class NoiseControlWidget(QWidget):
 
         for mode, btn in self.buttons.items():
             supported = capabilities.get(mode, False)
+            btn.setVisible(supported)
             btn.setEnabled(supported)
 
             if not supported:
