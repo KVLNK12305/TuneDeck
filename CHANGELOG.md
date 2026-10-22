@@ -4,9 +4,44 @@ All notable changes, bug fixes, and additions developed for the end-to-end testi
 
 ---
 
-## [Unreleased] - 2026-10-20
+## [Phase 2] Native Desktop GUI & Cross-Platform Engine - 2026-10-22
 
 ### Added
+- **Native Cross-Platform Desktop GUI (`tunedeck_gui/`)**:
+  - Independent native desktop application built with Qt6/PySide6, executable via `tunedeck-gui`.
+  - Signature dark aesthetic in JBL Electric Orange (`#FF6600`) and onyx gray (`#121316`).
+  - **Dynamic Battery Gauge (`BatteryGaugeWidget`)**:
+    - Antialiased circular gauge with gradient ring indicator for headphones and speakers.
+    - Automatic TWS Trio mode (Left, Right, Case) with independent telemetry rings and charging indicators.
+  - **Segmented Noise Control (`NoiseControlWidget`)**:
+    - Segmented pill selector for Active Noise Cancellation (ANC), Ambient Aware, TalkThru, and Off.
+    - Hardware capability gating dynamically enabling/disabling controls based on active model profile.
+  - **Graphic Equalizer Visualizer (`EqualizerWidget`)**:
+    - Real-time cubic spline curve drawn through gain points with translucent orange gradient fill.
+    - Multi-band vertical gain sliders (-12 dB to +12 dB) dynamically adapting to 10-band, 5-band, and 3-band hardware.
+    - Quick preset buttons (`Flat`, `Bass Boost`, `Club`, `Vocal`, `Jazz`) and `Ctrl+S` persistence.
+  - **Battery Health Panel (`HealthPanelWidget`)**:
+    - Statistical telemetry cards for Equivalent Full Cycles (EFC), active discharge rate (%/hr), retention trends, and confidence ratings.
+    - Interactive synthetic battery scenario generator (`healthy`, `degraded`, `gaps`, `clock_jumps`).
+  - **Device Header Bar (`DeviceBarWidget`)**:
+    - Real-time connection status dot, model selector dropdown across all 30 models, simulation toggle, and safe remote power-off confirmation dialog.
+  - **Device Spotlight Card (`DeviceSpotlightWidget`)**:
+    - High-fidelity product picture showcase for selected hardware with antialiased rounded corner masking.
+    - Category badges, protocol tags (`AIROHA RACE`), and dynamic hardware capability tags (`ANC`, `Ambient`, `TalkThru`, `EQ`, `PartyBoost`, `Auracast`).
+    - Smart hierarchical fallback for model families (`headphones.jpg`, `tws.jpg`, `speaker.jpg`, `partybox.jpg`) supporting exact per-model asset overrides.
+  - **Refined Premium Typography & Emoji Removal**:
+    - Complete removal of casual emojis across UI buttons, tabs, dials, status indicators, and headers in favor of clean high-contrast typography, colored status indicators, and sleek custom geometric vector icons.
+  - **System Tray Integration (`QSystemTrayIcon`)**:
+    - Minimizes to system tray, displays active battery percentages in tray menu and tooltips, quick noise mode switching.
+- **Cross-Platform Hardening**:
+  - `jblpc/lock.py`: Upgraded `SingleInstanceLock` to be cross-platform (supporting POSIX `fcntl` and Windows `msvcrt` without runtime crashes).
+  - `tunedeck_gui/bridge.py`: Re-entrant thread-safe controller bridge (`threading.RLock`) with queued Qt signal marshaling for smooth non-blocking UI.
+- **Headless Test Suite (`tests/test_gui.py`)**:
+  - 7 automated headless offscreen tests exercising UI component creation, noise mode switching, spline curve visualizers, TWS trio switching, speaker adaptations, synthetic health injection, and instance locking.
+
+---
+
+## [Unreleased] - 2026-10-20
 - **Multi-Model Catalog Expansion (`jblpc/models.py`)**:
   - Expanded catalog to 30 distinct JBL devices across 4 major families:
     - *Over-Ear & On-Ear*: Tune 770NC, 760NC, 720BT, 710BT, 670NC, 660NC, 520BT, 510BT, Live 770NC, 670NC, 660NC, 460NC, Tour ONE M2.

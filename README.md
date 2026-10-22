@@ -67,14 +67,27 @@ pip install -e .
 tunedeck cli models
 # (Note: 'jblpc' remains available as an alias)
 
-# 4. Launch the TUI
+# 4. Launch the TUI (Terminal)
 tunedeck
+
+# 5. Launch the Native Cross-Platform Desktop GUI (Windows, Linux, macOS)
+tunedeck-gui
+```
+
+### Native Desktop GUI (Cross-Platform)
+Launch the native graphical desktop interface featuring high-definition device spotlight product photos, real-time spline EQ curves, circular battery dials, clean typography without casual emojis, and system tray integration:
+```bash
+# Launch GUI in simulation mode (works on all platforms without hardware)
+tunedeck-gui --sim --model "JBL Tune 770NC"
+
+# Launch GUI connected to physical Bluetooth hardware
+tunedeck-gui --hardware --address "AA:BB:CC:DD:EE:FF"
 ```
 
 ### Simulation Mode (No Hardware Required)
 Explore any model's UI and capabilities without needing physical hardware:
 ```bash
-# Simulate a 10-band ANC headphone
+# Simulate a 10-band ANC headphone in terminal
 tunedeck --sim --model "JBL Tune 770NC"
 
 # Simulate TWS earbuds with trio battery (Left, Right, Case)
