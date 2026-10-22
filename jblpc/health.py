@@ -11,6 +11,7 @@ local SQLite database and derives:
 """
 
 import os
+import sys
 import sqlite3
 import time
 from pathlib import Path
@@ -20,10 +21,15 @@ from .exceptions import JBLPcError
 
 
 def get_data_dir() -> Path:
-    """Get the XDG data directory for TuneDeck / JBLPc."""
+    """Get the data directory for TuneDeck / JBLPc across platforms."""
     xdg_data = os.environ.get("XDG_DATA_HOME")
     if xdg_data:
         base = Path(xdg_data)
+    elif sys.platform == "win32":
+        localappdata = os.environ.get("LOCALAPPDATA")
+        base = Path(localappdata) if localappdata else (Path.home() / "AppData" / "Local")
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
     else:
         base = Path.home() / ".local" / "share"
     tunedeck_dir = base / "tunedeck"

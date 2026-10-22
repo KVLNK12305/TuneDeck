@@ -6,7 +6,7 @@
 - **Handled Gracefully**: 20
 - **Unhandled / Crashes**: 0
 - **Bare `except:` Found**: 0
-- **Swallowed Exceptions Found**: 17
+- **Swallowed Exceptions Found**: 18
 
 ## Static AST Codebase Scan
 
@@ -14,6 +14,7 @@
 ✓ **None found.** Zero bare `except:` statements exist in `jblpc/`.
 
 ### Swallowed Exceptions (`except Exception: pass`)
+- `jblpc/__main__.py:65` — `Exception` (swallowed with pass statement)
 - `jblpc/tui/app.py:353` — `NoMatches` (swallowed with pass statement)
 - `jblpc/tui/app.py:431` — `NoMatches` (swallowed with pass statement)
 - `jblpc/tui/app.py:743` — `NoMatches` (swallowed with pass statement)

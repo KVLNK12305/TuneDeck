@@ -235,7 +235,7 @@ def cmd_scan(controller: HeadsetController) -> int:
             table.add_row(d["name"], d["address"])
         console.print(table)
     else:
-        console.print("[dim]No paired JBL devices found via bluetoothctl.[/]")
+        console.print("[dim]No paired JBL devices found (pair your device via Bluetooth settings and try again).[/]")
     return 0
 
 
@@ -244,7 +244,7 @@ def cmd_diagnose(controller: HeadsetController) -> int:
     console.print("[bold #FF6600]🔬 Running JBLPc Device Diagnostics...[/]")
     devices = find_jbl_devices()
     if not devices:
-        console.print("[yellow]No paired JBL devices found via bluetoothctl.[/]")
+        console.print("[yellow]No paired JBL devices found.[/]")
         console.print("[dim]Pair your JBL device via Bluetooth settings and run this command again.[/]")
         return 1
 

@@ -18,6 +18,7 @@ import datetime
 import subprocess
 import re
 import os
+import sys
 import json
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -53,9 +54,17 @@ def is_valid_mac(address: str) -> bool:
 
 
 def get_config_dir() -> Path:
-    """Return XDG configuration directory for TuneDeck / JBLPc."""
+    """Return configuration directory for TuneDeck / JBLPc across platforms."""
     xdg = os.environ.get("XDG_CONFIG_HOME")
-    base = Path(xdg) if xdg else (Path.home() / ".config")
+    if xdg:
+        base = Path(xdg)
+    elif sys.platform == "win32":
+        appdata = os.environ.get("APPDATA")
+        base = Path(appdata) if appdata else (Path.home() / "AppData" / "Roaming")
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path.home() / ".config"
     tunedeck_dir = base / "tunedeck"
     jblpc_dir = base / "jblpc"
     if tunedeck_dir.exists() and (tunedeck_dir / "config.json").exists():
@@ -279,9 +288,7 @@ def load_config() -> dict:
 
     config_file = get_config_file()
     if not config_file.exists():
-        xdg = os.environ.get("XDG_CONFIG_HOME")
-        base = Path(xdg) if xdg else (Path.home() / ".config")
-        alt = base / "tunedeck" / "config.json"
+        alt = get_config_dir().parent / "tunedeck" / "config.json"
         if alt.exists():
             config_file = alt
 
@@ -349,7 +356,13 @@ class BluetoothConnection:
             return False
 
         if not hasattr(socket, "AF_BLUETOOTH"):
-            self.last_error = "Bluetooth sockets (AF_BLUETOOTH) are not supported on this platform."
+            if sys.platform == "darwin":
+                self.last_error = (
+                    "Bluetooth sockets (AF_BLUETOOTH) are not supported natively by Python on macOS. "
+                    "Use simulation mode (tunedeck --sim / tunedeck-gui --sim) or an RFCOMM serial bridge."
+                )
+            else:
+                self.last_error = "Bluetooth sockets (AF_BLUETOOTH) are not supported on this platform."
             return False
 
         try:
@@ -466,10 +479,80 @@ class BluetoothConnection:
         return frames
 
 
+def find_windows_jbl_devices() -> list[dict]:
+    """Discover paired JBL devices on Windows via PowerShell."""
+    devices = []
+    try:
+        cmd = [
+            "powershell.exe", "-NoProfile", "-Command",
+            "Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue | "
+            "Where-Object { $_.FriendlyName -match 'JBL|770|Live|Tour|Flip|Charge|Pulse|PartyBox' } | "
+            "Select-Object FriendlyName, InstanceId | ConvertTo-Json"
+        ]
+        res = subprocess.run(cmd, capture_output=True, timeout=5, text=True)
+        if res.returncode == 0 and res.stdout.strip():
+            raw = json.loads(res.stdout)
+            items = raw if isinstance(raw, list) else [raw]
+            for item in items:
+                name = item.get("FriendlyName", "").strip()
+                inst_id = item.get("InstanceId", "")
+                match = re.search(r"DEV_([0-9A-Fa-f]{12})", inst_id)
+                if match:
+                    raw_mac = match.group(1).upper()
+                    formatted_mac = ":".join(raw_mac[i:i+2] for i in range(0, 12, 2))
+                    devices.append({"address": formatted_mac, "name": name})
+                elif name:
+                    devices.append({"address": "", "name": name})
+    except Exception as err:
+        devices = []
+    return devices
+
+
+def find_macos_jbl_devices() -> list[dict]:
+    """Discover paired JBL devices on macOS via system_profiler."""
+    devices = []
+    try:
+        res = subprocess.run(
+            ["system_profiler", "SPBluetoothDataType", "-json"],
+            capture_output=True,
+            timeout=5
+        )
+        if res.returncode == 0:
+            data = json.loads(res.stdout.decode("utf-8", errors="replace"))
+            bt_items = data.get("SPBluetoothDataType", [{}])
+            if bt_items:
+                bt_data = bt_items[0]
+                raw_devices = []
+                if "devices_list" in bt_data:
+                    raw_devices = bt_data["devices_list"]
+                else:
+                    for k in ("device_connected", "device_not_connected"):
+                        sub = bt_data.get(k, [])
+                        if isinstance(sub, list):
+                            raw_devices.extend(sub)
+                        elif isinstance(sub, dict):
+                            for dev_name, info in sub.items():
+                                raw_devices.append({dev_name: info})
+
+                for item in raw_devices:
+                    if isinstance(item, dict):
+                        for dev_name, dev_info in item.items():
+                            upper = dev_name.upper()
+                            if any(kw in upper for kw in ("JBL", "770", "LIVE", "TOUR", "FLIP", "CHARGE", "PULSE", "PARTYBOX")):
+                                addr = ""
+                                if isinstance(dev_info, dict):
+                                    addr = dev_info.get("device_address", "") or dev_info.get("device_mac", "")
+                                addr = addr.replace("-", ":").upper()
+                                devices.append({"address": addr, "name": dev_name})
+    except Exception as err:
+        devices = []
+    return devices
+
+
 # ─── Device Discovery & System Probing ──────────────────────────────────────
 
 def check_bluetoothctl_available():
-    """Verify that bluetoothctl is installed and accessible."""
+    """Verify that bluetoothctl is installed and accessible (Linux)."""
     try:
         subprocess.run(["bluetoothctl", "--version"], capture_output=True, timeout=3)
     except FileNotFoundError:
@@ -480,6 +563,49 @@ def check_bluetoothctl_available():
 
 def check_bluetooth_adapter_powered():
     """Verify that the local Bluetooth controller exists and is powered on."""
+    if sys.platform == "win32":
+        try:
+            cmd = ["powershell.exe", "-NoProfile", "-Command",
+                   "(Get-PnpDevice -Class Bluetooth -Status OK -ErrorAction SilentlyContinue).Count"]
+            res = subprocess.run(cmd, capture_output=True, timeout=4, text=True)
+            if res.returncode == 0:
+                count = int(res.stdout.strip() or "0")
+                if count == 0:
+                    raise BluetoothAdapterError("Bluetooth adapter is powered off or missing.")
+                return
+        except BluetoothAdapterError:
+            raise
+        except Exception as err:
+            err_msg = str(err)
+
+        if hasattr(socket, "AF_BLUETOOTH"):
+            try:
+                s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+                s.close()
+                return
+            except Exception as e:
+                raise BluetoothAdapterError("Bluetooth adapter is powered off or missing.") from e
+        return
+    elif sys.platform == "darwin":
+        try:
+            res = subprocess.run(["system_profiler", "SPBluetoothDataType", "-json"],
+                                 capture_output=True, timeout=5)
+            if res.returncode == 0:
+                data = json.loads(res.stdout.decode("utf-8", errors="replace"))
+                bt_items = data.get("SPBluetoothDataType", [{}])
+                if bt_items:
+                    props = bt_items[0].get("controller_properties", {})
+                    state = props.get("controller_state", "")
+                    if state and "off" in state.lower():
+                        raise BluetoothAdapterError("Bluetooth adapter is powered off or missing.")
+                    return
+        except BluetoothAdapterError:
+            raise
+        except Exception as err:
+            err_msg = str(err)
+        return
+
+    # Linux (BlueZ / bluetoothctl)
     check_bluetoothctl_available()
     try:
         res = subprocess.run(["bluetoothctl", "show"], capture_output=True, timeout=5)
@@ -491,7 +617,13 @@ def check_bluetooth_adapter_powered():
 
 
 def find_jbl_devices() -> list[dict]:
-    """Discover paired JBL devices using bluetoothctl."""
+    """Discover paired JBL devices across platforms."""
+    if sys.platform == "win32":
+        return find_windows_jbl_devices()
+    elif sys.platform == "darwin":
+        return find_macos_jbl_devices()
+
+    # Linux (BlueZ / bluetoothctl)
     check_bluetoothctl_available()
     devices = []
     try:
@@ -513,9 +645,31 @@ def find_jbl_devices() -> list[dict]:
 
 
 def check_device_connected(address: str) -> bool:
-    """Check if a Bluetooth device is currently connected via bluetoothctl."""
+    """Check if a Bluetooth device is currently connected."""
     if not address:
         return False
+    if sys.platform == "win32":
+        try:
+            clean_addr = address.replace(":", "").replace("-", "")
+            cmd = ["powershell.exe", "-NoProfile", "-Command",
+                   f"Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue | "
+                   f"Where-Object {{ $_.InstanceId -like '*{clean_addr}*' }} | "
+                   f"Select-Object -ExpandProperty Status"]
+            res = subprocess.run(cmd, capture_output=True, timeout=4, text=True)
+            if res.returncode == 0:
+                return "OK" in res.stdout
+        except Exception as err:
+            return True
+        return True
+    elif sys.platform == "darwin":
+        try:
+            devs = find_macos_jbl_devices()
+            norm = address.upper().replace("-", ":")
+            return any(d.get("address", "").upper() == norm for d in devs)
+        except Exception as err:
+            return True
+
+    # Linux (BlueZ / bluetoothctl)
     check_bluetoothctl_available()
     try:
         result = subprocess.run(
@@ -532,9 +686,36 @@ def check_device_connected(address: str) -> bool:
 
 
 def check_device_paired(address: str) -> bool:
-    """Check if a Bluetooth device is paired via bluetoothctl."""
+    """Check if a Bluetooth device is paired."""
     if not address:
         return False
+    if sys.platform == "win32":
+        try:
+            devs = find_windows_jbl_devices()
+            norm = address.upper().replace("-", ":")
+            if any(d.get("address", "").upper() == norm for d in devs if d.get("address")):
+                return True
+            clean_addr = address.replace(":", "").replace("-", "")
+            cmd = ["powershell.exe", "-NoProfile", "-Command",
+                   f"(Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue | "
+                   f"Where-Object {{ $_.InstanceId -like '*{clean_addr}*' }}).Count"]
+            res = subprocess.run(cmd, capture_output=True, timeout=4, text=True)
+            if res.returncode == 0:
+                return int(res.stdout.strip() or "0") > 0
+        except Exception as err:
+            return True
+        return True
+    elif sys.platform == "darwin":
+        try:
+            devs = find_macos_jbl_devices()
+            norm = address.upper().replace("-", ":")
+            if any(d.get("address", "").upper() == norm for d in devs if d.get("address")):
+                return True
+            return len(devs) > 0
+        except Exception as err:
+            return True
+
+    # Linux (BlueZ / bluetoothctl)
     check_bluetoothctl_available()
     try:
         result = subprocess.run(

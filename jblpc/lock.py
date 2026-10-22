@@ -31,9 +31,15 @@ class SingleInstanceLock:
             xdg_runtime = os.environ.get("XDG_RUNTIME_DIR")
             if xdg_runtime:
                 base = Path(xdg_runtime)
+            elif os.environ.get("XDG_CONFIG_HOME"):
+                base = Path(os.environ["XDG_CONFIG_HOME"])
+            elif sys.platform == "win32":
+                import tempfile
+                base = Path(tempfile.gettempdir())
+            elif sys.platform == "darwin":
+                base = Path.home() / "Library" / "Caches"
             else:
-                xdg_config = os.environ.get("XDG_CONFIG_HOME")
-                base = Path(xdg_config) if xdg_config else Path.home() / ".config"
+                base = Path.home() / ".config"
             lock_dir = base / "jblpc"
         self.lock_path = lock_dir / name
         self._file = None

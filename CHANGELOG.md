@@ -34,7 +34,11 @@ All notable changes, bug fixes, and additions developed for the end-to-end testi
   - **System Tray Integration (`QSystemTrayIcon`)**:
     - Minimizes to system tray, displays active battery percentages in tray menu and tooltips, quick noise mode switching.
 - **Cross-Platform Hardening**:
-  - `jblpc/lock.py`: Upgraded `SingleInstanceLock` to be cross-platform (supporting POSIX `fcntl` and Windows `msvcrt` without runtime crashes).
+  - `jblpc/lock.py`: Upgraded `SingleInstanceLock` to be cross-platform (supporting POSIX `fcntl` and Windows `msvcrt` without runtime crashes, with Windows temp/macOS cache fallbacks).
+  - `jblpc/protocol.py`: Cross-platform Bluetooth device discovery and adapter telemetry (PowerShell on Windows, `system_profiler` on macOS, BlueZ `bluetoothctl` on Linux) with platform-aware `config.json` resolution (`%APPDATA%`, `Library/Application Support`, `~/.config`).
+  - `jblpc/health.py`: Cross-platform SQLite `health.db` data directory resolution (`%LOCALAPPDATA%` on Windows, `Library/Application Support` on macOS).
+  - `tunedeck_gui/windows/main_window.py`: Standard cross-platform shortcut bindings (`QKeySequence.StandardKey.Save` for `Ctrl+S` on Windows/Linux and `Cmd+S` on macOS).
+  - `run_tests.ps1`: Native PowerShell test runner script for Windows environments.
   - `tunedeck_gui/bridge.py`: Re-entrant thread-safe controller bridge (`threading.RLock`) with queued Qt signal marshaling for smooth non-blocking UI.
 - **Headless Test Suite (`tests/test_gui.py`)**:
   - 7 automated headless offscreen tests exercising UI component creation, noise mode switching, spline curve visualizers, TWS trio switching, speaker adaptations, synthetic health injection, and instance locking.

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tunedeck"
 version = "0.2.0"
-description = "Linux terminal controller for JBL headphones, earbuds, and speakers"
+description = "Terminal and desktop controller for JBL headphones, earbuds, and speakers (Linux, Windows, macOS)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

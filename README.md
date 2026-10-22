@@ -1,37 +1,61 @@
-# 🎧 TuneDeck — Terminal Controller for JBL Devices on Linux
+# 🎧 TuneDeck — Terminal & Desktop Controller for JBL Devices (Linux, Windows, macOS)
 
 > [!NOTE]
 > **Trademark & Affiliation Disclaimer**: TuneDeck is an independent, community-driven open-source project and is not affiliated with, sponsored by, or endorsed by JBL, Harman International Industries, or Samsung Electronics. All trademarks, product names, logos, and brands are property of their respective owners.
 
-A modern, high-performance terminal controller and Textual TUI for JBL headphones, earbuds, and portable speakers on Linux.  
-Control Active Noise Cancellation (ANC), Ambient Aware, TalkThru, multi-band graphical equalization, battery wear & retention tracking, and remote power management — right from your terminal.
+A modern, high-performance cross-platform controller for JBL headphones, earbuds, and portable speakers. TuneDeck delivers both a rich terminal Textual TUI with a scriptable CLI, and a native Qt6 graphical desktop interface (`tunedeck-gui`) across **Linux**, **Windows**, and **macOS**.  
+Control Active Noise Cancellation (ANC), Ambient Aware, TalkThru, multi-band graphical equalization, battery wear & retention tracking, and remote power management — right from your terminal or desktop.
 
 ---
 
-## 📋 System Requirements
+## 📋 System Requirements & Platform Support
 
-- **Operating System**: Linux (Ubuntu, Debian, Fedora, Arch Linux, openSUSE, etc.)
-- **Python**: Version 3.10 or higher
-- **Bluetooth Stack**: BlueZ with `bluetoothctl` installed and active (`systemctl status bluetooth`)
-- **Permissions**: Your user must have access to Bluetooth RFCOMM sockets (typically accomplished by membership in the `bluetooth` or `dialout` group):
+TuneDeck is built to run seamlessly across all major desktop operating systems:
+
+| Platform | CLI & Terminal TUI (`tunedeck`) | Desktop GUI (`tunedeck-gui`) | Simulation Mode (`--sim`) | Physical Hardware Connection |
+|---|:---:|:---:|:---:|---|
+| **🐧 Linux** | ✅ Supported | ✅ Supported | ✅ Supported | BlueZ stack (`bluetoothctl`, RFCOMM ch 21) |
+| **🪟 Windows** (10/11) | ✅ Supported | ✅ Supported | ✅ Supported | Windows Bluetooth stack (`AF_BLUETOOTH` / COM) |
+| **🍏 macOS** (Intel & Apple Silicon) | ✅ Supported | ✅ Supported | ✅ Supported | Native UI & Simulation / CoreBluetooth |
+
+### Platform-Specific Prerequisites
+
+- **Python**: Version 3.10 or higher on all platforms.
+- **Dependencies**:
+  - *Core (CLI & TUI)*: `textual>=0.50.0`, `rich>=13.0.0`, `platformdirs>=4.0.0`
+  - *Native Desktop GUI*: `PySide6-Essentials>=6.5.0` (installed via `pip install -e ".[gui]"`)
+
+#### 🐧 Linux
+- **Bluetooth Stack**: BlueZ with `bluetoothctl` installed and active (`systemctl status bluetooth`).
+- **User Permissions**: Your user must have access to Bluetooth RFCOMM sockets (membership in `bluetooth` or `dialout` group):
   ```bash
   sudo usermod -aG bluetooth $USER
   # Log out and log back in for group changes to take effect
   ```
-- **Dependencies**: `textual>=0.50.0`, `rich>=13.0.0`, `platformdirs>=4.0.0`
+
+#### 🪟 Windows (10 & 11)
+- **Terminal**: [Windows Terminal](https://aka.ms/terminal) (recommended for full UTF-8 and 24-bit truecolor rendering), PowerShell 7+, or standard Command Prompt.
+- **Bluetooth**: Pair your JBL device through **Windows Settings > Bluetooth & devices**. Python 3.9+ on Windows supports native Bluetooth sockets (`socket.AF_BLUETOOTH`).
+- **File Locking**: Automatic cross-platform file locking using `msvcrt` prevents concurrent instances from corrupting configuration or device state.
+
+#### 🍏 macOS (macOS 12 Monterey through macOS 15 Sequoia)
+- **Terminal**: Terminal.app, [iTerm2](https://iterm2.com/), or Ghostty.
+- **Architecture**: Universal support for both Apple Silicon (M1/M2/M3/M4) and Intel x86_64 Macs.
+- **Bluetooth Permissions**: When running hardware commands from Terminal, grant Bluetooth access if prompted, or verify in **System Settings > Privacy & Security > Bluetooth**.
 
 ---
 
 ## ✨ Features
 
 - 🎧 **Comprehensive Multi-Model Catalog** — Support for 30 cataloged models across 4 device categories (Over-Ear, TWS Earbuds, Portable Speakers, PartyBox) and 11 model families (Tune, Live, Tour, Wave/Vibe, Endurance Peak, Flip, Charge, Xtreme, Boombox, Pulse, PartyBox) plus 3 fallback archetypes for uncataloged devices.
+- 🖥️ **Native Desktop GUI (`tunedeck-gui`)** — Sleek dark desktop application built on Qt6/PySide6 with JBL Electric Orange (`#FF6600`) highlights, antialiased circular battery dials, real-time cubic spline EQ curves, device spotlight photography, and system tray integration (Windows notification area, macOS menu bar, Linux tray).
 - 🔇 **Noise Control** — Switch between Active Noise Cancellation (ANC), Ambient Aware, TalkThru, and Off (gated per model capability).
-- 🎚️ **Equalizer & Live Tuner** — In-terminal ASCII curve visualizer, standard presets (`flat`, `jazz`, `vocal`, `bass`, `club`), custom band gain tuning (10-band, 5-band, 3-band), interactive `W, A, S, D` navigation, and `Ctrl+S` configuration persistence.
-- 🔋 **Battery Health & Retention Estimator** — Tracks historical charge cycles in local SQLite (`~/.local/share/tunedeck/health.db` or `~/.local/share/jblpc/health.db`). Derives estimated Equivalent Full Cycles (EFC), active discharge rate (%/hr), and retention degradation trends with confidence ratings (`low`, `medium`, `high`).
+- 🎚️ **Equalizer & Live Tuner** — Multi-band graphical EQ (10-band, 5-band, 3-band), standard presets (`flat`, `jazz`, `vocal`, `bass`, `club`), interactive `W, A, S, D` navigation in terminal, smooth sliders in GUI, and `Ctrl+S` / `Cmd+S` configuration persistence.
+- 🔋 **Battery Health & Retention Estimator** — Tracks historical charge cycles in cross-platform SQLite storage. Derives estimated Equivalent Full Cycles (EFC), active discharge rate (%/hr), and retention degradation trends with confidence ratings (`low`, `medium`, `high`).
 - ⚡ **Power Management** — Remote power-off command with safe hardware gating.
-- 🖥️ **Rich Textual TUI** — Dark aesthetic in signature orange (`#FF6600`), featuring real-time EQ sliders, TWS Trio gauges (Left, Right, Case), activity logs, and a toggleable Health panel.
-- ⌨️ **Scriptable CLI** — Machine-readable `--json` output across status, health, and equalizer for desktop automation and keybinding daemons.
-- 🧪 **Offline Simulator** — Full `--sim --model "<model>"` emulation for testing every feature without requiring physical hardware.
+- 💻 **Rich Textual TUI** — Terminal interface featuring real-time EQ visualizers, TWS Trio gauges (Left, Right, Case), activity logs, and a toggleable Health panel.
+- ⌨️ **Scriptable CLI** — Machine-readable `--json` output across status, health, and equalizer for desktop automation, Stream Decks, and keybinding daemons.
+- 🧪 **Offline Simulator** — Full `--sim --model "<model>"` emulation for exploring and testing every feature on any platform without physical hardware.
 - 🔬 **Built-in Diagnostics** — Automated RFCOMM channel probe and diagnostic dump export (`tunedeck cli diagnose`) to submit support for new hardware.
 
 ---
@@ -56,38 +80,83 @@ Control Active Noise Cancellation (ANC), Ambient Aware, TalkThru, multi-band gra
 
 ## 🚀 Quick Start
 
+Choose your platform below to set up your environment:
+
+### 🐧 Linux & 🍏 macOS
+
 ```bash
-# 1. Activate virtual environment
+# 1. Clone the repository and navigate to the project directory
+git clone https://github.com/KVLNK12305/TuneDeck.git
+cd TuneDeck
+
+# 2. Create and activate a Python virtual environment
+python3 -m venv .venv
 source .venv/bin/activate
 
-# 2. Install TuneDeck in editable mode
-pip install -e .
+# 3. Install TuneDeck (use ".[gui]" to include the native Desktop GUI)
+pip install -e ".[gui]"
 
-# 3. List all supported JBL models
+# 4. List all supported JBL models
 tunedeck cli models
-# (Note: 'jblpc' remains available as an alias)
 
-# 4. Launch the TUI (Terminal)
-tunedeck
-
-# 5. Launch the Native Cross-Platform Desktop GUI (Windows, Linux, macOS)
+# 5. Launch the Native Desktop GUI
 tunedeck-gui
+
+# 6. Or launch the Terminal TUI
+tunedeck
 ```
 
-### Native Desktop GUI (Cross-Platform)
-Launch the native graphical desktop interface featuring high-definition device spotlight product photos, real-time spline EQ curves, circular battery dials, clean typography without casual emojis, and system tray integration:
+### 🪟 Windows (PowerShell / Windows Terminal)
+
+```powershell
+# 1. Clone the repository and navigate to the project directory
+git clone https://github.com/KVLNK12305/TuneDeck.git
+cd TuneDeck
+
+# 2. Create and activate a Python virtual environment
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+# (Note: In standard Command Prompt 'cmd.exe', use: .venv\Scripts\activate.bat)
+
+# 3. Install TuneDeck (use ".[gui]" to include the native Desktop GUI)
+pip install -e ".[gui]"
+
+# 4. List all supported JBL models
+tunedeck cli models
+
+# 5. Launch the Native Desktop GUI
+tunedeck-gui
+
+# 6. Or launch the Terminal TUI
+tunedeck
+```
+
+---
+
+## 🖥️ Native Desktop GUI (`tunedeck-gui`)
+
+The native graphical interface delivers a first-class desktop experience with:
+- **Device Spotlight**: High-definition product photos of your selected JBL hardware with capability badges (`ANC`, `Ambient`, `EQ`, `PartyBoost`, `Auracast`).
+- **Dynamic Circular Battery Gauges**: Smooth antialiased gradient meters supporting both single-battery devices and TWS Trio mode (Left, Right, Case).
+- **Interactive Graphic Equalizer**: Real-time cubic spline curve drawn through gain points with translucent orange fill, multi-band vertical sliders (-12 dB to +12 dB), and one-click presets.
+- **System Tray Integration**: Minimizes to the system tray (Windows notification area, macOS menu bar, Linux system tray), shows live battery telemetry in tooltips, and offers quick noise mode switching.
+
 ```bash
-# Launch GUI in simulation mode (works on all platforms without hardware)
+# Launch GUI in simulation mode (works out of the box on all platforms without hardware)
 tunedeck-gui --sim --model "JBL Tune 770NC"
 
 # Launch GUI connected to physical Bluetooth hardware
 tunedeck-gui --hardware --address "AA:BB:CC:DD:EE:FF"
 ```
 
-### Simulation Mode (No Hardware Required)
-Explore any model's UI and capabilities without needing physical hardware:
+---
+
+## 🧪 Simulation Mode (No Hardware Required)
+
+Explore any model's features, equalizer, battery gauges, and noise controls on **any OS** without needing physical hardware:
+
 ```bash
-# Simulate a 10-band ANC headphone in terminal
+# Simulate a 10-band ANC headphone
 tunedeck --sim --model "JBL Tune 770NC"
 
 # Simulate TWS earbuds with trio battery (Left, Right, Case)
@@ -95,28 +164,66 @@ tunedeck --sim --model "JBL Tune 230NC TWS"
 
 # Simulate a portable 3-band speaker
 tunedeck --sim --model "JBL Flip 6"
+
+# Simulate a PartyBox speaker with Auracast and lightshow
+tunedeck --sim --model "JBL PartyBox Stage 320"
 ```
 
 ---
 
 ## ⚙️ Configuration
 
-Set your device's Bluetooth MAC address:
+Configure your device's Bluetooth MAC address via environment variables or a configuration file:
 
+### 1. Via Environment Variable
+
+- **Linux & macOS (bash / zsh)**:
+  ```bash
+  export JBL_BD="AA:BB:CC:DD:EE:FF"
+  # (or export TUNEDECK_BD="AA:BB:CC:DD:EE:FF")
+  ```
+- **Windows (PowerShell)**:
+  ```powershell
+  $env:JBL_BD="AA:BB:CC:DD:EE:FF"
+  ```
+- **Windows (Command Prompt)**:
+  ```cmd
+  set JBL_BD=AA:BB:CC:DD:EE:FF
+  ```
+
+### 2. Via Configuration File (`config.json`)
+
+TuneDeck follows standard operating system directories using `platformdirs`:
+
+| Operating System | Configuration Directory | Health Database Path |
+|---|---|---|
+| **🐧 Linux** | `~/.config/tunedeck/config.json` | `~/.local/share/tunedeck/health.db` |
+| **🍏 macOS** | `~/Library/Application Support/tunedeck/config.json` *(or `~/.config/tunedeck/config.json`)* | `~/Library/Application Support/tunedeck/health.db` |
+| **🪟 Windows** | `%APPDATA%\tunedeck\config.json` *(e.g. `C:\Users\<User>\AppData\Roaming\tunedeck\config.json`)* | `%LOCALAPPDATA%\tunedeck\health.db` |
+
+#### Linux / macOS:
 ```bash
-# Via environment variable
-export JBL_BD="AA:BB:CC:DD:EE:FF"
-# (or export TUNEDECK_BD="AA:BB:CC:DD:EE:FF")
-
-# Or via XDG config file (~/.config/tunedeck/config.json or ~/.config/jblpc/config.json)
 mkdir -p ~/.config/tunedeck
 echo '{"bluetooth_address": "AA:BB:CC:DD:EE:FF"}' > ~/.config/tunedeck/config.json
 ```
 
-Discover paired JBL devices on your system:
-```bash
-tunedeck cli scan
+#### Windows (PowerShell):
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:APPDATA\tunedeck"
+'{"bluetooth_address": "AA:BB:CC:DD:EE:FF"}' | Out-File -Encoding utf8 "$env:APPDATA\tunedeck\config.json"
 ```
+
+### 3. Discovering Paired Devices
+
+- **Linux**: Discover paired JBL devices automatically:
+  ```bash
+  tunedeck cli scan
+  ```
+- **Windows**: Check paired devices under **Settings > Bluetooth & devices > Devices**, or via PowerShell:
+  ```powershell
+  Get-PnpDevice -Class Bluetooth | Where-Object { $_.FriendlyName -like "*JBL*" }
+  ```
+- **macOS**: View paired devices in **System Settings > Bluetooth**, or hold the `Option` key and click the **Apple Menu > System Information > Bluetooth**.
 
 ---
 
@@ -131,6 +238,8 @@ tunedeck cli scan
 
 ## 💻 CLI Commands
 
+All commands can be invoked with `tunedeck cli <command>` (or using the alias `jblpc cli <command>`):
+
 | Command | Arguments | Description |
 |---|---|---|
 | `status` | `[--json]` | Display connection state, model, noise mode, EQ preset, and battery levels |
@@ -144,14 +253,14 @@ tunedeck cli scan
 | `noiseoff` | | Turn off noise control / ambient modes |
 | `battery` | | Display single battery gauge or TWS Left / Right / Case levels |
 | `poweroff` | | Power off device remotely (headsets and speakers) |
-| `scan` | | Scan for paired JBL Bluetooth devices via `bluetoothctl` |
+| `scan` | | Scan for paired JBL Bluetooth devices |
 | `diagnose` | | Export diagnostic dump for uncataloged devices (`jbl_device_diagnostic.json`) |
 
 ---
 
 ## 🎚️ Equalizer Guide
 
-View active EQ curve:
+View active EQ curve in the terminal:
 ```bash
 tunedeck cli eq
 ```
@@ -174,14 +283,14 @@ tunedeck cli eq
 ```
 
 ### Interactive Equalizer Tuning
-Tune EQ interactively in the terminal with live visual feedback:
+Tune EQ interactively with live visual feedback:
 ```bash
 tunedeck cli eq -i
 # or: tunedeck cli eq --interactive
 ```
 - **A / D** (or `←` / `→`): Navigate between frequency bands
 - **W / S** (or `↑` / `↓`): Increase / decrease gain ($\pm 1\text{dB}$)
-- **Ctrl+S**: Save active curve to config (`~/.config/tunedeck/config.json`) and apply to headset
+- **Ctrl+S** (or **Cmd+S** on macOS): Save active curve to `config.json` and apply to headset
 - **Q**: Exit interactive tuner
 
 ### Preset Selection
@@ -191,7 +300,7 @@ tunedeck cli eq vocal
 tunedeck cli eq jazz
 tunedeck cli eq flat
 tunedeck cli eq club
-# Add --save to remember this preset across launches:
+# Add --save to persist across launches:
 tunedeck cli eq bass --save
 ```
 
@@ -235,40 +344,55 @@ tunedeck cli battery-log --interval 300 --count 12
 
 ---
 
-## ⌨️ TUI Keyboard Shortcuts
+## ⌨️ Keyboard Shortcuts
+
+### Terminal TUI (`tunedeck`)
 
 | Key | Action |
 |---|---|
 | `q` | Quit application |
-| `c` | Connect to device via RFCOMM channel 21 |
+| `c` | Connect to device via RFCOMM |
 | `x` | Disconnect socket cleanly |
 | `a` / `d` or `←` / `→` | Select active Equalizer frequency band |
 | `w` / `s` or `↑` / `↓` | Increase / Decrease active band gain ($\pm 1\text{dB}$) |
-| `Ctrl+S` | Save active Equalizer preset & custom bands to `config.json` |
+| `Ctrl+S` / `Cmd+S` | Save active Equalizer preset & custom bands to `config.json` |
 | `n` | Cycle Noise Modes (`Off` → `ANC` → `Ambient` → `TalkThru`) |
 | `e` | Cycle Equalizer Presets (`Flat` → `Jazz` → `Vocal` → `Bass` → `Club`) |
 | `h` | Toggle Battery Health & Retention panel |
 | `b` | Refresh battery level |
-| `p` | Power off headset |
+| `p` | Power off headset (with confirmation dialog) |
 | `1` | Direct Noise Off |
 | `2` | Direct ANC |
 | `3` | Direct Ambient Aware |
 | `4` | Direct TalkThru |
 | `r` | Full state refresh |
 
+### Native Desktop GUI (`tunedeck-gui`)
+
+- **Tab Navigation**: Switch between **Controls & Equalizer** and **Battery Health Analytics** tabs.
+- **`Ctrl+S` / `Cmd+S`**: Save equalizer settings to `config.json`.
+- **System Tray**: Click tray icon to restore or minimize to background; right-click for quick noise control and exit.
+
 ---
 
 ## 🧪 Testing & Verification
 
-The test suite runs 100% offline without requiring Bluetooth hardware:
+The comprehensive test suite runs 100% offline without requiring Bluetooth hardware:
 
+### Linux & macOS
 ```bash
 # Run the entire test suite and regenerate reports
 ./run_tests.sh
 ```
 
+### Windows (PowerShell / CMD)
+```powershell
+# Run the pytest matrix
+pytest -v
+```
+
 ### Pytest Markers
-- `-m "not hardware"`: Runs the full offline matrix across CLI subprocesses, headless Textual TUI pilot sessions, fault injection scenarios, battery health tracking, and protocol verification (default).
+- `-m "not hardware"`: Runs the full offline matrix across CLI subprocesses, headless Textual TUI pilot sessions, Qt6 offscreen GUI tests, fault injection scenarios, battery health tracking, and protocol verification (default).
 - `-m "hardware"`: Runs against physical hardware when explicitly authorized (`--hardware`, `JBL_BD="XX:XX:XX:XX:XX:XX"`, and `JBLPC_ALLOW_POWEROFF=1`).
 
 ---

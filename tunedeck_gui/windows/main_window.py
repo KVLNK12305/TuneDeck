@@ -152,8 +152,8 @@ class MainWindow(QMainWindow):
         # 5. Connect Signal Bindings
         self._wire_signals()
 
-        # 6. Shortcuts
-        save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        # 6. Shortcuts (Ctrl+S on Windows/Linux, Cmd+S on macOS)
+        save_shortcut = QShortcut(QKeySequence(QKeySequence.StandardKey.Save), self)
         save_shortcut.activated.connect(self._on_save_shortcut)
 
     def _setup_system_tray(self, icon: QIcon):
@@ -262,3 +262,6 @@ class MainWindow(QMainWindow):
     def _on_save_shortcut(self):
         self.bridge.save_eq_to_config()
         self.status_bar.showMessage("Equalizer configuration saved to config.json", 4000)
+
+
+

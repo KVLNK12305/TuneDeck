@@ -4,11 +4,17 @@
     "handled_scenarios": 20,
     "unhandled_scenarios": 0,
     "bare_except_count": 0,
-    "swallowed_exceptions_count": 17
+    "swallowed_exceptions_count": 18
   },
   "ast_scan": {
     "bare_excepts": [],
     "swallowed_exceptions": [
+      {
+        "file": "jblpc/__main__.py",
+        "line": 65,
+        "type": "Exception",
+        "description": "swallowed with pass statement"
+      },
       {
         "file": "jblpc/tui/app.py",
         "line": 353,
@@ -115,137 +121,202 @@
     "handled_handlers": [
       {
         "file": "jblpc/lock.py",
-        "line": 40,
+        "line": 15,
+        "type": "ImportError"
+      },
+      {
+        "file": "jblpc/lock.py",
+        "line": 20,
+        "type": "ImportError"
+      },
+      {
+        "file": "jblpc/lock.py",
+        "line": 62,
         "type": "(IOError, OSError)"
       },
       {
         "file": "jblpc/lock.py",
-        "line": 55,
+        "line": 81,
         "type": "OSError"
       },
       {
         "file": "jblpc/lock.py",
-        "line": 61,
+        "line": 87,
         "type": "OSError"
       },
       {
         "file": "jblpc/lock.py",
-        "line": 44,
+        "line": 66,
         "type": "OSError"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 317,
+        "line": 324,
         "type": "OSError"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 475,
-        "type": "FileNotFoundError"
-      },
-      {
-        "file": "jblpc/protocol.py",
-        "line": 477,
-        "type": "subprocess.TimeoutExpired"
-      },
-      {
-        "file": "jblpc/protocol.py",
-        "line": 489,
-        "type": "(subprocess.TimeoutExpired, FileNotFoundError)"
-      },
-      {
-        "file": "jblpc/protocol.py",
-        "line": 510,
-        "type": "subprocess.TimeoutExpired"
-      },
-      {
-        "file": "jblpc/protocol.py",
-        "line": 530,
-        "type": "subprocess.TimeoutExpired"
+        "line": 506,
+        "type": "Exception"
       },
       {
         "file": "jblpc/protocol.py",
         "line": 547,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 558,
+        "type": "FileNotFoundError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 560,
         "type": "subprocess.TimeoutExpired"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 297,
+        "line": 615,
+        "type": "(subprocess.TimeoutExpired, FileNotFoundError)"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 642,
+        "type": "subprocess.TimeoutExpired"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 684,
+        "type": "subprocess.TimeoutExpired"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 728,
+        "type": "subprocess.TimeoutExpired"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 304,
         "type": "json.JSONDecodeError"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 299,
+        "line": 306,
         "type": "OSError"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 366,
+        "line": 379,
         "type": "PermissionError"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 370,
+        "line": 383,
         "type": "ConnectionRefusedError"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 374,
+        "line": 387,
         "type": "(socket.timeout, TimeoutError)"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 378,
+        "line": 391,
         "type": "(OSError, socket.error)"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 401,
+        "line": 414,
         "type": "(OSError, socket.error)"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 186,
+        "line": 576,
+        "type": "BluetoothAdapterError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 578,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 661,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 705,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 195,
         "type": "ValueError"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 388,
+        "line": 401,
         "type": "OSError"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 432,
+        "line": 445,
         "type": "socket.timeout"
       },
       {
         "file": "jblpc/protocol.py",
-        "line": 435,
+        "line": 448,
         "type": "(OSError, socket.error)"
       },
       {
+        "file": "jblpc/protocol.py",
+        "line": 586,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 602,
+        "type": "BluetoothAdapterError"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 604,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 669,
+        "type": "Exception"
+      },
+      {
+        "file": "jblpc/protocol.py",
+        "line": 715,
+        "type": "Exception"
+      },
+      {
         "file": "jblpc/health.py",
-        "line": 100,
+        "line": 106,
         "type": "sqlite3.DatabaseError"
       },
       {
         "file": "jblpc/health.py",
-        "line": 159,
+        "line": 165,
         "type": "sqlite3.DatabaseError"
       },
       {
         "file": "jblpc/health.py",
-        "line": 203,
+        "line": 209,
         "type": "sqlite3.DatabaseError"
       },
       {
         "file": "jblpc/health.py",
-        "line": 216,
+        "line": 222,
         "type": "sqlite3.DatabaseError"
       },
       {
         "file": "jblpc/health.py",
-        "line": 121,
+        "line": 127,
         "type": "(sqlite3.DatabaseError, OSError)"
       },
       {
@@ -290,33 +361,28 @@
       },
       {
         "file": "jblpc/controller.py",
-        "line": 230,
+        "line": 238,
         "type": "BluetoothAdapterError"
       },
       {
         "file": "jblpc/controller.py",
-        "line": 557,
+        "line": 569,
         "type": "Exception"
       },
       {
         "file": "jblpc/controller.py",
-        "line": 171,
+        "line": 179,
         "type": "Exception"
       },
       {
         "file": "jblpc/__main__.py",
-        "line": 70,
+        "line": 79,
         "type": "KeyboardInterrupt"
       },
       {
         "file": "jblpc/__main__.py",
-        "line": 72,
+        "line": 81,
         "type": "Exception"
-      },
-      {
-        "file": "jblpc/__main__.py",
-        "line": 62,
-        "type": "(EOFError, KeyboardInterrupt)"
       },
       {
         "file": "jblpc/tui/app.py",
