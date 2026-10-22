@@ -29,6 +29,16 @@ def main():
             model_name = args[idx + 1]
             args = args[:idx] + args[idx + 2:]
 
+    # GUI mode (e.g. `tunedeck gui` or `tunedeck --gui`)
+    if "--gui" in args or (args and args[0] == "gui"):
+        from tunedeck_gui.__main__ import main as gui_main
+        gui_args = [a for a in args if a not in ("--gui", "gui")]
+        if simulate:
+            gui_args.append("--sim")
+        if model_name:
+            gui_args.extend(["--model", model_name])
+        sys.exit(gui_main(gui_args))
+
     # CLI mode
     if args and args[0] == "cli":
         from .cli import run_cli
@@ -45,22 +55,21 @@ def main():
         config = load_config()
         bt_address = config.get("bluetooth_address", "")
 
-        # If no address and no simulation, offer simulation
+        # Auto-discover paired JBL device if not set
+        if not bt_address and not simulate:
+            try:
+                from .protocol import find_jbl_devices
+                paired = find_jbl_devices()
+                if paired:
+                    bt_address = paired[0]["address"]
+            except Exception:
+                pass
+
+        # If no address found and no simulation, launch simulation mode directly
         if not bt_address and not simulate:
             from rich.console import Console
             console = Console()
-            console.print()
-            console.print("[bold #FF6600]🎧 TuneDeck — Universal JBL Controller[/]")
-            console.print()
-            console.print("[yellow]No Bluetooth address configured.[/]")
-            console.print("[dim]Set it with: export JBL_BD=\"XX:XX:XX:XX:XX:XX\" (or TUNEDECK_BD)[/]")
-            console.print()
-            console.print("[bold]Launching in [yellow]simulation mode[/bold] so you can explore the UI...[/]")
-            console.print("[dim]Press Enter to continue...[/]")
-            try:
-                input()
-            except (EOFError, KeyboardInterrupt):
-                return
+            console.print("[dim]No Bluetooth address configured. Launching in simulation mode...[/]")
             simulate = True
 
         controller = HeadsetController(bt_address=bt_address, simulate=simulate, model=model_name)
