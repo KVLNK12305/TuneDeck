@@ -692,10 +692,25 @@ def run_cli(args: list[str]) -> int:
 
         # Load config safely
         config = load_config()
+        bt_address = config.get("bluetooth_address", "")
+        if not bt_address and not simulate:
+            try:
+                paired = find_jbl_devices()
+                if paired and paired[0].get("address"):
+                    bt_address = paired[0]["address"]
+                    config["bluetooth_address"] = bt_address
+                    save_config(config)
+                    if not model_name and paired[0].get("name"):
+                        from .models import match_device_profile
+                        matched = match_device_profile(paired[0]["name"])
+                        if matched:
+                            model_name = matched.model_id
+            except Exception as err:
+                pass_err = str(err)
 
         with SingleInstanceLock():
             controller = HeadsetController(
-                bt_address=config.get("bluetooth_address", ""),
+                bt_address=bt_address,
                 simulate=simulate,
                 model=model_name,
             )

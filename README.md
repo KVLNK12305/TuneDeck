@@ -361,6 +361,7 @@ tunedeck cli battery-log --interval 300 --count 12
 | `h` | Toggle Battery Health & Retention panel |
 | `b` | Refresh battery level |
 | `p` | Power off headset (with confirmation dialog) |
+| `m` | Toggle Simulation / Hardware mode |
 | `1` | Direct Noise Off |
 | `2` | Direct ANC |
 | `3` | Direct Ambient Aware |

@@ -10,12 +10,6 @@
     "bare_excepts": [],
     "swallowed_exceptions": [
       {
-        "file": "jblpc/__main__.py",
-        "line": 65,
-        "type": "Exception",
-        "description": "swallowed with pass statement"
-      },
-      {
         "file": "jblpc/tui/app.py",
         "line": 353,
         "type": "NoMatches",
@@ -29,73 +23,79 @@
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 743,
+        "line": 751,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 748,
+        "line": 762,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 753,
+        "line": 767,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 759,
+        "line": 772,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 765,
+        "line": 778,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 770,
+        "line": 784,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 775,
+        "line": 789,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 795,
+        "line": 794,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 830,
+        "line": 814,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 837,
+        "line": 861,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 844,
+        "line": 868,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 851,
+        "line": 875,
+        "type": "NoMatches",
+        "description": "swallowed with pass statement"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 882,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
@@ -107,7 +107,7 @@
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 787,
+        "line": 806,
         "type": "NoMatches",
         "description": "swallowed with pass statement"
       },
@@ -326,23 +326,28 @@
       },
       {
         "file": "jblpc/cli.py",
-        "line": 733,
+        "line": 748,
         "type": "KeyboardInterrupt"
       },
       {
         "file": "jblpc/cli.py",
-        "line": 736,
+        "line": 751,
         "type": "(ConfigError, BluetoothAdapterError, DeviceNotPairedError, JBLConnectionError, ProtocolError, UnsupportedCommandError, InstanceLockError)"
       },
       {
         "file": "jblpc/cli.py",
-        "line": 747,
+        "line": 762,
         "type": "Exception"
       },
       {
         "file": "jblpc/cli.py",
         "line": 465,
         "type": "ValueError"
+      },
+      {
+        "file": "jblpc/cli.py",
+        "line": 708,
+        "type": "Exception"
       },
       {
         "file": "jblpc/cli.py",
@@ -385,6 +390,11 @@
         "type": "Exception"
       },
       {
+        "file": "jblpc/__main__.py",
+        "line": 72,
+        "type": "Exception"
+      },
+      {
         "file": "jblpc/tui/app.py",
         "line": 223,
         "type": "NoMatches"
@@ -406,8 +416,13 @@
       },
       {
         "file": "jblpc/tui/app.py",
-        "line": 721,
+        "line": 723,
         "type": "(AttributeError, ValueError)"
+      },
+      {
+        "file": "jblpc/tui/app.py",
+        "line": 838,
+        "type": "Exception"
       }
     ]
   },

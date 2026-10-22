@@ -58,19 +58,19 @@ def main():
         # Auto-discover paired JBL device if not set
         if not bt_address and not simulate:
             try:
-                from .protocol import find_jbl_devices
+                from .protocol import find_jbl_devices, save_config
+                from .models import match_device_profile
                 paired = find_jbl_devices()
-                if paired:
+                if paired and paired[0].get("address"):
                     bt_address = paired[0]["address"]
-            except Exception:
-                pass
-
-        # If no address found and no simulation, launch simulation mode directly
-        if not bt_address and not simulate:
-            from rich.console import Console
-            console = Console()
-            console.print("[dim]No Bluetooth address configured. Launching in simulation mode...[/]")
-            simulate = True
+                    config["bluetooth_address"] = bt_address
+                    save_config(config)
+                    if not model_name and paired[0].get("name"):
+                        matched = match_device_profile(paired[0]["name"])
+                        if matched:
+                            model_name = matched.model_id
+            except Exception as err:
+                pass_err = str(err)
 
         controller = HeadsetController(bt_address=bt_address, simulate=simulate, model=model_name)
 

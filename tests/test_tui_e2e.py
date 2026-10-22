@@ -256,3 +256,51 @@ async def test_tui_equalizer_wasd_and_save(isolated_env):
 
         # Clean quit
         await pilot.press("q")
+
+
+@pytest.mark.tui
+@pytest.mark.asyncio
+async def test_tui_simulation_toggle_button(isolated_env):
+    """
+    Verify:
+      - Default hardware mode (simulate=False) does not show simulation badge
+      - '#btn-simulate' button starts with label '🧪 Simulation'
+      - Clicking simulation button or pressing 'm' enables simulation mode
+      - Button label toggles to '🔌 Hardware' and banner shows SIMULATOR
+      - Clicking again switches back to hardware mode and removes simulation badge
+    """
+    controller = HeadsetController(simulate=False, model_id="tune_770nc", bt_address="AA:BB:CC:DD:EE:FF")
+    app = JBLPcApp(controller)
+
+    async with app.run_test(size=(120, 50)) as pilot:
+        await pilot.pause()
+
+        # In hardware mode, verify button label and lack of simulation badge
+        sim_btn = app.query_one("#btn-simulate", Button)
+        assert sim_btn is not None
+        assert "Simulation" in str(sim_btn.label)
+
+        banner = app.query_one(BrandBanner)
+        assert banner is not None
+        assert "SIMULATOR" not in str(banner.query_one("#banner-content", Static).render())
+
+        # Click simulation button
+        await pilot.click("#btn-simulate")
+        await pilot.pause()
+
+        # Verify simulation mode is now active
+        assert controller.simulating is True
+        assert "Hardware" in str(sim_btn.label)
+        assert "SIMULATOR" in str(banner.query_one("#banner-content", Static).render())
+
+        # Press 'm' to toggle back to hardware mode
+        await pilot.press("m")
+        await pilot.pause()
+
+        # Verify hardware mode is restored and simulation badge is gone
+        assert controller.simulating is False
+        assert "Simulation" in str(sim_btn.label)
+        assert "SIMULATOR" not in str(banner.query_one("#banner-content", Static).render())
+
+        await pilot.press("q")
+

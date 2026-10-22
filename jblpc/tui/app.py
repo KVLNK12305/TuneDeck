@@ -51,12 +51,12 @@ class BrandBanner(Static):
     def compose(self) -> ComposeResult:
         yield Static(id="banner-content")
 
-    def update_state(self, state: HeadsetState):
+    def update_state(self, state: HeadsetState, simulating: bool = False):
         banner = self.query_one("#banner-content", Static)
 
         status_color = "green" if state.connected else "red"
         status_text = "● CONNECTED" if state.connected else "● DISCONNECTED"
-        sim_badge = " [dim italic](SIM)[/]" if not state.connected else ""
+        sim_badge = " [bold yellow]🧪 SIMULATOR[/]" if simulating else ""
 
         model_display = f"🎧 {state.device_name}"
         art = Text.from_markup(
@@ -681,6 +681,7 @@ class JBLPcApp(App):
         Binding("4", "noise_talkthru", "TalkThru", show=False),
         Binding("b", "check_battery", "Battery", show=True),
         Binding("p", "power_off", "Power Off", show=True),
+        Binding("m", "toggle_simulation", "Sim Mode", show=True),
         Binding("r", "refresh", "Refresh", show=True),
     ]
 
@@ -697,6 +698,7 @@ class JBLPcApp(App):
             yield Button("Disconnect", id="btn-disconnect")
             yield Button("🔍 Scan", id="btn-scan")
             yield Button("⏻ Power Off", id="btn-poweroff")
+            yield Button("🧪 Simulation", id="btn-simulate")
         with Horizontal(id="main-layout"):
             with Vertical(id="left-panel"):
                 yield BatteryWidget()
@@ -721,9 +723,15 @@ class JBLPcApp(App):
         except (AttributeError, ValueError) as e:
             self.log.warning(f"Could not check console dimensions: {e}")
 
-        # Auto-connect in simulation mode
+        # Auto-connect if address is configured or in simulation mode
         if self.controller.simulating:
             self.controller.connect()
+        elif self.controller.state.bt_address:
+            connected = self.controller.connect()
+            if not connected:
+                self.controller._add_log(f"⚠ Could not connect to {self.controller.state.bt_address}: {self.controller.last_error or 'Device unreachable'}")
+        else:
+            self.controller._add_log("⚠ No paired JBL device detected. Press 'Scan' or '🧪 Simulation'.")
 
         self._update_all()
 
@@ -739,7 +747,18 @@ class JBLPcApp(App):
         state = self.controller.state
 
         try:
-            self.query_one(BrandBanner).update_state(state)
+            self.query_one(BrandBanner).update_state(state, simulating=self.controller.simulating)
+        except NoMatches:
+            pass
+
+        try:
+            sim_btn = self.query_one("#btn-simulate", Button)
+            if self.controller.simulating:
+                sim_btn.label = "🔌 Hardware"
+                sim_btn.variant = "warning"
+            else:
+                sim_btn.label = "🧪 Simulation"
+                sim_btn.variant = "default"
         except NoMatches:
             pass
 
@@ -809,11 +828,23 @@ class JBLPcApp(App):
             if devices:
                 for d in devices:
                     self.controller._add_log(f"🔍 Found: {d['name']} ({d['address']})")
+                if not self.controller.state.bt_address and devices:
+                    self.controller.state.bt_address = devices[0]["address"]
+                    try:
+                        from ..protocol import save_config, load_config
+                        cfg = load_config()
+                        cfg["bluetooth_address"] = devices[0]["address"]
+                        save_config(cfg)
+                    except Exception as err:
+                        pass_err = str(err)
+                    self.controller.connect()
             else:
                 self.controller._add_log("🔍 No JBL devices found (is BT on?)")
             self._update_all()
         elif btn_id == "btn-poweroff":
             self.controller.power_off()
+        elif btn_id == "btn-simulate":
+            self.action_toggle_simulation()
 
     # ─── Key bindings ────────────────────────────────────────────────────
 
@@ -886,6 +917,24 @@ class JBLPcApp(App):
     def action_refresh(self):
         if self.controller.state.connected:
             self.controller.get_battery()
+        self._update_all()
+
+    def action_toggle_simulation(self):
+        """Toggle between real hardware and offline simulator."""
+        if not self.controller.simulating:
+            self.controller.disconnect()
+            self.controller._simulate = True
+            self.controller.connect()
+            self.controller._add_log("🧪 Switched to Simulation Mode")
+            self.notify("Simulation mode activated", title="Mode", severity="information")
+        else:
+            self.controller.disconnect()
+            self.controller._simulate = False
+            self.controller.state.connected = False
+            self.controller._add_log("🔌 Switched to Hardware Mode")
+            if self.controller.state.bt_address:
+                self.controller.connect()
+            self.notify("Hardware mode activated", title="Mode", severity="information")
         self._update_all()
 
 

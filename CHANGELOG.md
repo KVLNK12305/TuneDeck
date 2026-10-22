@@ -40,8 +40,13 @@ All notable changes, bug fixes, and additions developed for the end-to-end testi
   - `tunedeck_gui/windows/main_window.py`: Standard cross-platform shortcut bindings (`QKeySequence.StandardKey.Save` for `Ctrl+S` on Windows/Linux and `Cmd+S` on macOS).
   - `run_tests.ps1`: Native PowerShell test runner script for Windows environments.
   - `tunedeck_gui/bridge.py`: Re-entrant thread-safe controller bridge (`threading.RLock`) with queued Qt signal marshaling for smooth non-blocking UI.
-- **Headless Test Suite (`tests/test_gui.py`)**:
-  - 7 automated headless offscreen tests exercising UI component creation, noise mode switching, spline curve visualizers, TWS trio switching, speaker adaptations, synthetic health injection, and instance locking.
+- **Hardware Auto-Discovery & TUI Simulation Decoupling**:
+  - `jblpc/__main__.py`, `jblpc/cli.py`, `tunedeck_gui/bridge.py`: Automatically discover paired JBL hardware on launch, match profile, and persist MAC address to `config.json` without requiring manual entry.
+  - `jblpc/tui/app.py`: Removed silent automatic fallback into simulation mode; fixed banner to only display `[🧪 SIMULATOR]` badge when simulation mode is active.
+  - Added dedicated `[🧪 Simulation]` / `[🔌 Hardware]` toggle button and `m` shortcut in TUI to explicitly switch modes.
+  - Automatic hardware connection on TUI mount when a paired device address is available.
+- **Headless Test Suite (`tests/test_gui.py`, `tests/test_tui_e2e.py`)**:
+  - 8 automated headless tests including interactive TUI simulation toggle verification.
 
 ---
 
