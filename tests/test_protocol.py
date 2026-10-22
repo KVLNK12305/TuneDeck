@@ -160,3 +160,46 @@ def test_parse_bad_checksum():
     frame_with_bad_chk = bytes([0x05, FRAME_TYPE_RESPONSE, 0x03, 0x00, 0x02, 0x04, 0x55, 0x00])
     with pytest.raises(ProtocolError, match="Frame checksum mismatch"):
         parse_frames(frame_with_bad_chk, verify_checksum_byte=True)
+
+
+@pytest.mark.protocol
+def test_parse_noise_mode_notification_and_response_formats():
+    """Verify parsing real hardware unsolicited notification and query response frames."""
+    from jblpc.protocol import (
+        FRAME_TYPE_NOTIFICATION,
+        OP_NOISE_SET,
+        OP_NOISE_GET,
+        OP_BATTERY_PERCENTAGE,
+        get_system_battery_level,
+    )
+    # 1. Real hardware notification: 05 5C 06 00 01 09 05 00 00 01 (ANC)
+    anc_ntf = bytes([0x05, FRAME_TYPE_NOTIFICATION, 0x06, 0x00, 0x01, 0x09, 0x05, 0x00, 0x00, 0x01])
+    f_anc, _ = parse_frames(anc_ntf)
+    assert len(f_anc) == 1
+    assert f_anc[0].noise_mode == NoiseMode.ANC
+
+    # 2. Real hardware notification: 05 5C 06 00 01 09 05 00 00 00 (OFF)
+    off_ntf = bytes([0x05, FRAME_TYPE_NOTIFICATION, 0x06, 0x00, 0x01, 0x09, 0x05, 0x00, 0x00, 0x00])
+    f_off, _ = parse_frames(off_ntf)
+    assert len(f_off) == 1
+    assert f_off[0].noise_mode == NoiseMode.OFF
+
+    # 3. Real hardware notification: Ambient Aware (0x0A) and TalkThru (0x09)
+    amb_ntf = bytes([0x05, FRAME_TYPE_NOTIFICATION, 0x06, 0x00, 0x01, 0x09, 0x05, 0x00, 0x00, 0x0A])
+    f_amb, _ = parse_frames(amb_ntf)
+    assert f_amb[0].noise_mode == NoiseMode.AMBIENT_AWARE
+
+    talk_ntf = bytes([0x05, FRAME_TYPE_NOTIFICATION, 0x06, 0x00, 0x01, 0x09, 0x05, 0x00, 0x00, 0x09])
+    f_talk, _ = parse_frames(talk_ntf)
+    assert f_talk[0].noise_mode == NoiseMode.TALKTHRU
+
+    # 4. Battery percentage reading 0x0403 (e.g. 100%)
+    batt_frame = bytes([0x05, FRAME_TYPE_RESPONSE, 0x0A, 0x00, 0x03, 0x04, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00, 0x5D, 0x64])
+    f_batt, _ = parse_frames(batt_frame)
+    assert len(f_batt) == 1
+    assert f_batt[0].battery_level == 100
+
+    # 5. Invalid / empty MAC check for get_system_battery_level
+    assert get_system_battery_level("") is None
+    assert get_system_battery_level("invalid-mac") is None
+

@@ -20,6 +20,8 @@ from .protocol import (
     NOISE_SETTERS,
     OP_NOISE_SET,
     OP_NOISE_GET,
+    OP_NOISE_GET_PAYLOAD,
+    OP_BATTERY_PERCENTAGE,
     OP_BATTERY_GET,
     OP_POWER_OFF,
     OP_EQ_SET,
@@ -30,6 +32,7 @@ from .protocol import (
     check_device_connected,
     check_device_paired,
     check_bluetooth_adapter_powered,
+    get_system_battery_level,
     is_valid_mac,
 )
 from .models import (
@@ -262,6 +265,15 @@ class HeadsetController:
         if success:
             self.state.connected = True
             self._add_log("✓ RFCOMM connection established")
+            # Drain initial unsolicited frames (headset pushes initial noise status immediately on connect)
+            try:
+                init_frames = self._connection.receive(timeout=0.8)
+                for f in init_frames:
+                    if f.noise_mode is not None:
+                        self.state.noise_mode = f.noise_mode
+                        self._add_log(f"🔇 Headset mode: {MODE_NAMES[f.noise_mode]}")
+            except Exception:
+                pass
             self._query_battery()
             self._query_noise_mode()
         else:
@@ -336,11 +348,16 @@ class HeadsetController:
             return False
 
         success = self._connection.send_command(OP_NOISE_SET, payload)
+        if not success:
+            # Fallback to legacy opcode if OP_NOISE_SET fails
+            from .protocol import OP_NOISE_SET_LEGACY
+            success = self._connection.send_command(OP_NOISE_SET_LEGACY, payload)
+
         if success:
             self.state.noise_mode = mode
             self._add_log(f"🔇 Noise mode → {MODE_NAMES[mode]}")
 
-            frames = self._connection.receive(timeout=1.0)
+            frames = self._connection.receive(timeout=1.5)
             for frame in frames:
                 if frame.noise_mode is not None:
                     self.state.noise_mode = frame.noise_mode
@@ -377,6 +394,30 @@ class HeadsetController:
             return next_mode
         return None
 
+    # ─── Polling & Real-time Notifications ───────────────────────────────
+
+    def poll(self):
+        """Poll for unsolicited incoming notifications (e.g. physical ANC button press on headset)."""
+        if self._simulate or not self.state.connected or not self._connection:
+            return
+
+        try:
+            frames = self._connection.receive(timeout=0.05)
+            changed = False
+            for f in frames:
+                if f.noise_mode is not None and f.noise_mode != self.state.noise_mode:
+                    self.state.noise_mode = f.noise_mode
+                    self._add_log(f"🔇 Headset mode: {MODE_NAMES[f.noise_mode]}")
+                    changed = True
+                if f.battery_level is not None and f.battery_level != self.state.battery_level:
+                    self.state.battery_level = f.battery_level
+                    self._add_log(f"🔋 Battery: {self.state.battery_level}%")
+                    changed = True
+            if changed:
+                self._notify()
+        except Exception:
+            pass
+
     # ─── Battery ─────────────────────────────────────────────────────────
 
     def get_battery(self) -> int:
@@ -392,17 +433,37 @@ class HeadsetController:
         return self.state.battery_level
 
     def poll_battery(self) -> int:
-        """Poll and return current battery level."""
+        """Poll incoming frames and return current battery level."""
+        self.poll()
         return self.get_battery()
 
     def _query_battery(self):
-        """Query battery level from headset."""
+        """Query battery level from system Bluetooth stack and headset."""
+        if self._simulate:
+            return
+
+        # 1. Query OS Bluetooth subsystem (BlueZ, macOS, Windows)
+        if self.state.bt_address:
+            sys_batt = get_system_battery_level(self.state.bt_address)
+            if sys_batt is not None and 0 <= sys_batt <= 100:
+                self.state.battery_level = sys_batt
+                self._add_log(f"🔋 Battery: {self.state.battery_level}%")
+                return
+
+        # 2. Fallback to RFCOMM battery telemetry if available
         if not self._connection or not self.state.connected:
             return
 
-        frames = self._connection.send_and_receive(OP_BATTERY_GET, timeout=2.0)
+        frames = self._connection.send_and_receive(OP_BATTERY_PERCENTAGE, timeout=1.0)
         for frame in frames:
             if frame.battery_level is not None:
+                self.state.battery_level = frame.battery_level
+                self._add_log(f"🔋 Battery: {self.state.battery_level}%")
+                return
+
+        frames = self._connection.send_and_receive(OP_BATTERY_GET, timeout=1.0)
+        for frame in frames:
+            if frame.battery_level is not None and frame.battery_level > 10:
                 self.state.battery_level = frame.battery_level
                 self._add_log(f"🔋 Battery: {self.state.battery_level}%")
                 break
@@ -414,7 +475,9 @@ class HeadsetController:
         if not self._connection or not self.state.connected:
             return
 
-        frames = self._connection.send_and_receive(OP_NOISE_GET, timeout=2.0)
+        frames = self._connection.send_and_receive(
+            OP_NOISE_GET, payload=OP_NOISE_GET_PAYLOAD, timeout=2.0
+        )
         for frame in frames:
             if frame.noise_mode is not None:
                 self.state.noise_mode = frame.noise_mode

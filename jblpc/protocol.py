@@ -124,9 +124,12 @@ NOISE_SETTERS = {
 }
 
 # Known opcodes
-OP_NOISE_SET = 0x0908          # Set noise control mode
+OP_NOISE_SET = 0x0E06          # Set noise control mode (verified Airoha RACE command for JBL)
+OP_NOISE_SET_LEGACY = 0x0908   # Legacy/fallback noise set opcode
 OP_NOISE_GET = 0x0901          # Get/response noise control mode
-OP_BATTERY_GET = 0x0402        # Get battery level
+OP_NOISE_GET_PAYLOAD = bytes.fromhex("0500")  # Query payload for noise status
+OP_BATTERY_PERCENTAGE = 0x0403 # Battery percentage reading
+OP_BATTERY_GET = 0x0402        # Battery status / PMU register
 OP_POWER_OFF = 0x0104          # Power off the device
 OP_EQ_SET = 0x0A01             # Set EQ
 OP_EQ_GET = 0x0A02             # Get EQ
@@ -188,19 +191,34 @@ class Frame:
 
     @property
     def noise_mode(self) -> Optional[NoiseMode]:
-        """Extract noise mode from a noise status response."""
+        """Extract noise mode from a noise status response or notification."""
         if self.opcode == OP_NOISE_GET and len(self.payload) >= 4:
             try:
                 return NoiseMode(self.payload[3])
             except ValueError:
                 return None
+        if self.opcode in (OP_NOISE_SET, OP_NOISE_SET_LEGACY) and len(self.payload) >= 2:
+            if self.payload.startswith(b"\x00\x0b"):
+                return NoiseMode.OFF
+            elif self.payload.startswith(b"\x00\x0a\x01"):
+                return NoiseMode.ANC
+            elif self.payload.startswith(b"\x00\x0a\x0a"):
+                return NoiseMode.AMBIENT_AWARE
+            elif self.payload.startswith(b"\x00\x0a\x09"):
+                return NoiseMode.TALKTHRU
         return None
 
     @property
     def battery_level(self) -> Optional[int]:
         """Extract battery percentage from a battery response."""
+        if self.opcode == OP_BATTERY_PERCENTAGE and len(self.payload) >= 1:
+            val = self.payload[-1]
+            if 0 <= val <= 100:
+                return val
         if self.opcode == OP_BATTERY_GET and len(self.payload) >= 1:
-            return self.payload[0]
+            val = self.payload[0]
+            if 0 <= val <= 100:
+                return val
         return None
 
     def __repr__(self):
@@ -727,3 +745,83 @@ def check_device_paired(address: str) -> bool:
         return "Paired: yes" in stdout
     except subprocess.TimeoutExpired:
         return False
+
+
+def get_system_battery_level(address: str) -> Optional[int]:
+    """
+    Get battery percentage reported by the operating system Bluetooth subsystem
+    (Linux BlueZ/bluetoothctl/UPower, macOS system_profiler, Windows PowerShell/PnP).
+    Returns integer 0-100 or None if unavailable.
+    """
+    if not address:
+        return None
+
+    if sys.platform == "win32":
+        try:
+            clean_addr = address.replace(":", "").replace("-", "")
+            cmd = [
+                "powershell.exe", "-NoProfile", "-Command",
+                f"$dev = Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue | Where-Object {{ $_.InstanceId -like '*{clean_addr}*' }} | Select-Object -First 1; "
+                "if ($dev) { (Get-PnpDeviceProperty -InstanceId $dev.InstanceId -KeyName '{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2' -ErrorAction SilentlyContinue).Data }"
+            ]
+            res = subprocess.run(cmd, capture_output=True, timeout=4, text=True)
+            if res.returncode == 0:
+                raw = res.stdout.strip()
+                if raw.isdigit():
+                    val = int(raw)
+                    if 0 <= val <= 100:
+                        return val
+        except Exception:
+            pass
+        return None
+
+    elif sys.platform == "darwin":
+        try:
+            res = subprocess.run(["system_profiler", "SPBluetoothDataType", "-json"],
+                                 capture_output=True, timeout=5)
+            if res.returncode == 0:
+                raw_json = res.stdout.decode("utf-8", errors="replace")
+                m = re.search(r'"(?:device_batteryLevelMain|batteryPercentCase|battery_percent)"\s*:\s*"?(\d+)"?', raw_json)
+                if m:
+                    val = int(m.group(1))
+                    if 0 <= val <= 100:
+                        return val
+        except Exception:
+            pass
+        return None
+
+    # Linux (BlueZ / bluetoothctl / UPower)
+    try:
+        check_bluetoothctl_available()
+        res = subprocess.run(
+            ["bluetoothctl", "info", address],
+            capture_output=True,
+            timeout=5
+        )
+        stdout = res.stdout.decode("utf-8", errors="replace")
+        m = re.search(r"Battery Percentage:\s*(?:0x[0-9a-fA-F]+\s*\()?(\d+)\)?", stdout)
+        if m:
+            val = int(m.group(1))
+            if 0 <= val <= 100:
+                return val
+    except Exception:
+        pass
+
+    # Optional fallback to upower on Linux
+    try:
+        res = subprocess.run(["upower", "-e"], capture_output=True, timeout=3, text=True)
+        if res.returncode == 0:
+            mac_clean = address.replace(":", "_").lower()
+            for line in res.stdout.splitlines():
+                if mac_clean in line.lower() or "headset" in line.lower():
+                    info = subprocess.run(["upower", "-i", line.strip()], capture_output=True, timeout=3, text=True)
+                    m = re.search(r"percentage:\s*(\d+)%", info.stdout)
+                    if m:
+                        val = int(m.group(1))
+                        if 0 <= val <= 100:
+                            return val
+    except Exception:
+        pass
+
+    return None
+

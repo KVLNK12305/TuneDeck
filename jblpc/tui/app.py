@@ -799,6 +799,9 @@ class JBLPcApp(App):
         if self.controller.state.connected:
             if self.controller.simulating:
                 self.controller.get_battery()
+            else:
+                self.controller.poll()
+                self.controller._query_battery()
             # Log reading to health database
             self.controller.log_health_reading()
             try:

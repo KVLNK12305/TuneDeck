@@ -45,8 +45,13 @@ All notable changes, bug fixes, and additions developed for the end-to-end testi
   - `jblpc/tui/app.py`: Removed silent automatic fallback into simulation mode; fixed banner to only display `[🧪 SIMULATOR]` badge when simulation mode is active.
   - Added dedicated `[🧪 Simulation]` / `[🔌 Hardware]` toggle button and `m` shortcut in TUI to explicitly switch modes.
   - Automatic hardware connection on TUI mount when a paired device address is available.
-- **Headless Test Suite (`tests/test_gui.py`, `tests/test_tui_e2e.py`)**:
-  - 8 automated headless tests including interactive TUI simulation toggle verification.
+- **Hardware ANC & Telemetry Synchronization Fix**:
+  - `jblpc/protocol.py`: Corrected Airoha RACE command opcode `OP_NOISE_SET = 0x0E06` (with fallback to `0x0908`), query payload `OP_NOISE_GET_PAYLOAD = 0500`, and added battery percentage parsing for `0x0403`.
+  - Added `get_system_battery_level()` querying standard OS Bluetooth reporting (BlueZ `bluetoothctl` / UPower, macOS `system_profiler`, Windows PowerShell), preventing erroneous PMU status bytes from overriding actual battery percentage.
+  - `jblpc/controller.py`: Drains initial unsolicited state notification frames upon RFCOMM socket connect, queries `0x0901` with proper `0500` payload, confirms set modes via response and notification parsing, and added non-blocking `poll()` for incoming unsolicited frames (e.g. physical headset button presses).
+  - `jblpc/tui/app.py` & `tunedeck_gui/bridge.py`: Integrated non-blocking `poll()` into periodic refresh loops to update TUI and GUI displays in real-time when physical headset controls are pressed.
+- **Headless Test Suite (`tests/test_gui.py`, `tests/test_tui_e2e.py`, `tests/test_protocol.py`)**:
+  - 451 automated unit and integration tests passing (100%), with dedicated tests for unsolicited notification frames and battery percentage parsing.
 
 ---
 
