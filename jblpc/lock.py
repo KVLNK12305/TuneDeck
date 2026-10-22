@@ -5,14 +5,24 @@ Prevents concurrent second instance from corrupting device state or locking RFCO
 """
 
 import os
-import fcntl
+import sys
 from pathlib import Path
 from typing import Optional
 from .exceptions import InstanceLockError
 
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
+
+try:
+    import msvcrt
+except ImportError:
+    msvcrt = None
+
 
 class SingleInstanceLock:
-    """Acquires an exclusive flock on an instance lockfile."""
+    """Acquires an exclusive flock on an instance lockfile (cross-platform)."""
 
     def __init__(self, lock_dir: Optional[Path] = None, name: str = "jblpc.lock", lock_name: Optional[str] = None):
         if lock_name:
@@ -33,8 +43,14 @@ class SingleInstanceLock:
         """Acquire lock or raise InstanceLockError if another instance holds it."""
         try:
             self.lock_path.parent.mkdir(parents=True, exist_ok=True)
-            self._file = open(self.lock_path, "w")
-            fcntl.flock(self._file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self._file = open(self.lock_path, "w+")
+            if fcntl:
+                fcntl.flock(self._file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            elif msvcrt:
+                # Windows file lock
+                msvcrt.locking(self._file.fileno(), msvcrt.LK_NBLCK, 1)
+            self._file.seek(0)
+            self._file.truncate()
             self._file.write(f"{os.getpid()}\n")
             self._file.flush()
         except (IOError, OSError) as e:
@@ -50,7 +66,11 @@ class SingleInstanceLock:
         """Release the instance lock and remove the lockfile."""
         if self._file:
             try:
-                fcntl.flock(self._file, fcntl.LOCK_UN)
+                if fcntl:
+                    fcntl.flock(self._file, fcntl.LOCK_UN)
+                elif msvcrt:
+                    self._file.seek(0)
+                    msvcrt.locking(self._file.fileno(), msvcrt.LK_UNLCK, 1)
                 self._file.close()
             except OSError as err:
                 self._cleanup_error = str(err)

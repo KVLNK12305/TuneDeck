@@ -152,6 +152,14 @@ class HeadsetController:
     def simulating(self) -> bool:
         return self._simulate
 
+    @property
+    def connected(self) -> bool:
+        return self.state.connected
+
+    @property
+    def is_connected(self) -> bool:
+        return self.state.connected
+
     def set_profile(self, profile: DeviceProfile):
         """Update active profile and reconfigure state."""
         self.state.profile = profile
@@ -382,6 +390,10 @@ class HeadsetController:
 
         self._query_battery()
         return self.state.battery_level
+
+    def poll_battery(self) -> int:
+        """Poll and return current battery level."""
+        return self.get_battery()
 
     def _query_battery(self):
         """Query battery level from headset."""
