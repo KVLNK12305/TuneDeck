@@ -5,6 +5,7 @@ Interactive Multi-Band Graphic Equalizer with Smooth Spline Visualizer.
 from typing import Optional
 from PySide6.QtCore import Qt, Signal, QRectF, QPointF
 from PySide6.QtGui import (
+    QKeySequence,
     QPainter,
     QColor,
     QPen,
@@ -55,7 +56,7 @@ class SplineCurveVisualizer(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedHeight(110)
+        self.setFixedHeight(90)
         self.band_gains: list[int] = [0] * 10
 
     def set_gains(self, gains: list[int]):
@@ -152,6 +153,7 @@ class EqualizerWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("cardFrame")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(18, 16, 18, 16)
@@ -244,7 +246,8 @@ class EqualizerWidget(QWidget):
         preset_box.addStretch()
 
         # Save Button
-        self.save_btn = QPushButton("Save Preset (Ctrl+S)")
+        save_keys = QKeySequence(QKeySequence.StandardKey.Save).toString(QKeySequence.SequenceFormat.NativeText)
+        self.save_btn = QPushButton(f"Save Preset ({save_keys})" if save_keys else "Save Preset")
         self.save_btn.setObjectName("primaryButton")
         self.save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.save_btn.clicked.connect(self.save_requested.emit)

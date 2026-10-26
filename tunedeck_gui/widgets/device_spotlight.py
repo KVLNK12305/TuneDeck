@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QFrame,
 )
 
-from jblpc.models import DeviceProfile, DeviceCategory
+from jblpc.models import DeviceProfile, DeviceCategory, ProtocolFamily
 from ..theme import (
     COLOR_BG_DARK,
     COLOR_BG_CARD,
@@ -32,6 +32,7 @@ from ..theme import (
 )
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets" / "devices"
+IMG_W, IMG_H = 238, 150
 
 
 def get_device_image_path(profile: DeviceProfile) -> Path:
@@ -64,6 +65,7 @@ class DeviceSpotlightWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("cardFrame")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setFixedWidth(270)
 
         layout = QVBoxLayout(self)
@@ -91,7 +93,7 @@ class DeviceSpotlightWidget(QWidget):
 
         # Product Image Frame
         self.img_frame = QLabel()
-        self.img_frame.setFixedHeight(180)
+        self.img_frame.setFixedHeight(IMG_H + 2)
         self.img_frame.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.img_frame.setStyleSheet(f"""
             QLabel {{
@@ -113,13 +115,19 @@ class DeviceSpotlightWidget(QWidget):
         self.cat_lbl.setStyleSheet(f"font-size: 11px; color: {COLOR_TEXT_SECONDARY};")
         layout.addWidget(self.cat_lbl)
 
-        # Feature pills container with pre-allocated labels
-        self.features_layout = QHBoxLayout()
+        # Feature pills container with pre-allocated labels (3 per row)
+        self.features_layout = QVBoxLayout()
         self.features_layout.setSpacing(4)
         layout.addLayout(self.features_layout)
+        tag_rows = []
+        for _ in range(2):
+            row = QHBoxLayout()
+            row.setSpacing(4)
+            self.features_layout.addLayout(row)
+            tag_rows.append(row)
 
         self.tag_labels: list[QLabel] = []
-        for _ in range(4):
+        for i in range(6):
             lbl = QLabel()
             lbl.setStyleSheet(f"""
                 font-size: 10px;
@@ -131,10 +139,11 @@ class DeviceSpotlightWidget(QWidget):
                 border-radius: 4px;
             """)
             lbl.hide()
-            self.features_layout.addWidget(lbl)
+            tag_rows[i // 3].addWidget(lbl)
             self.tag_labels.append(lbl)
 
-        self.features_layout.addStretch()
+        for row in tag_rows:
+            row.addStretch()
         layout.addStretch()
 
     def update_from_state(self, state):
@@ -142,31 +151,39 @@ class DeviceSpotlightWidget(QWidget):
         profile = state.profile
         self.name_lbl.setText(profile.display_name)
         self.cat_lbl.setText(profile.category.value)
-        self.protocol_tag.setText(profile.protocol_family.value.upper())
+        # Short tag that fits the card; the full protocol name goes in the tooltip.
+        if profile.protocol_family == ProtocolFamily.AIROHA_RACE:
+            self.protocol_tag.setText("AIROHA RACE")
+            self.protocol_tag.setToolTip(profile.protocol_family.value)
+        else:
+            self.protocol_tag.setText("SIM ONLY")
+            self.protocol_tag.setToolTip(
+                f"{profile.protocol_family.value}: hardware control is not implemented yet"
+            )
 
         # Load and render device product image with rounded corners
         img_path = get_device_image_path(profile)
         if img_path.exists():
             pix = QPixmap(str(img_path))
             scaled = pix.scaled(
-                238, 178,
+                IMG_W, IMG_H,
                 Qt.AspectRatioMode.KeepAspectRatioByExpanding,
                 Qt.TransformationMode.SmoothTransformation
             )
 
             # Mask with rounded corners
-            rounded = QPixmap(238, 178)
+            rounded = QPixmap(IMG_W, IMG_H)
             rounded.fill(Qt.GlobalColor.transparent)
             painter = QPainter(rounded)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
             path = QPainterPath()
-            path.addRoundedRect(0, 0, 238, 178, 10, 10)
+            path.addRoundedRect(0, 0, IMG_W, IMG_H, 10, 10)
             painter.setClipPath(path)
             # Center cropped
-            offset_x = (scaled.width() - 238) // 2
-            offset_y = (scaled.height() - 178) // 2
-            painter.drawPixmap(0, 0, scaled, offset_x, offset_y, 238, 178)
+            offset_x = (scaled.width() - IMG_W) // 2
+            offset_y = (scaled.height() - IMG_H) // 2
+            painter.drawPixmap(0, 0, scaled, offset_x, offset_y, IMG_W, IMG_H)
             painter.end()
 
             self.img_frame.setPixmap(rounded)

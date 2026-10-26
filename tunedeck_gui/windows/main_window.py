@@ -20,16 +20,19 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QTabWidget,
+    QScrollArea,
     QStatusBar,
     QSystemTrayIcon,
     QMenu,
     QMessageBox,
+    QLabel,
 )
 
 from ..theme import (
     DARK_STYLESHEET,
     COLOR_BG_DARK,
     COLOR_JBL_ORANGE,
+    COLOR_ACCENT_RED,
     COLOR_TEXT_PRIMARY,
     COLOR_TEXT_SECONDARY,
     COLOR_TEXT_MUTED,
@@ -84,7 +87,7 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self.bridge = bridge
         self.setWindowTitle("TuneDeck — JBL Audio Controller")
-        self.resize(980, 740)
+        self.resize(1000, 820)
         self.setMinimumSize(880, 640)
         self.setStyleSheet(DARK_STYLESHEET)
 
@@ -100,7 +103,21 @@ class MainWindow(QMainWindow):
 
         # 1. Top Device Bar
         self.device_bar = DeviceBarWidget(self)
+        # Reflect the bridge's real starting mode without triggering a mode switch
+        self.device_bar.sim_check.blockSignals(True)
+        self.device_bar.sim_check.setChecked(bridge.simulate)
+        self.device_bar.sim_check.blockSignals(False)
         main_layout.addWidget(self.device_bar)
+
+        # Why we're not connected, in full (hidden while connected)
+        self.connection_banner = QLabel()
+        self.connection_banner.setWordWrap(True)
+        self.connection_banner.setStyleSheet(
+            f"background-color: rgba(255, 61, 87, 0.12); color: {COLOR_TEXT_PRIMARY};"
+            f"border-left: 3px solid {COLOR_ACCENT_RED}; padding: 8px 12px; font-size: 12px;"
+        )
+        self.connection_banner.hide()
+        main_layout.addWidget(self.connection_banner)
 
         # 2. Tabs
         self.tabs = QTabWidget()
@@ -110,7 +127,7 @@ class MainWindow(QMainWindow):
         # Tab 1: Sound & Controls
         sound_tab = QWidget()
         sound_layout = QVBoxLayout(sound_tab)
-        sound_layout.setContentsMargins(0, 12, 0, 0)
+        sound_layout.setContentsMargins(16, 12, 16, 12)
         sound_layout.setSpacing(14)
 
         top_controls_row = QHBoxLayout()
@@ -133,14 +150,16 @@ class MainWindow(QMainWindow):
 
         self.eq_widget = EqualizerWidget(sound_tab)
         sound_layout.addWidget(self.eq_widget)
+        sound_layout.addStretch()
         sound_tab.setLayout(sound_layout)
 
-        self.tabs.addTab(sound_tab, "Sound & Noise Control")
+        # "&&" because a single "&" marks a keyboard mnemonic in Qt
+        self.tabs.addTab(self._scrollable(sound_tab), "Sound && Noise Control")
 
         # Tab 2: Battery Health Analytics
         health_tab = QWidget()
         health_layout = QVBoxLayout(health_tab)
-        health_layout.setContentsMargins(0, 12, 0, 0)
+        health_layout.setContentsMargins(16, 12, 16, 12)
         health_layout.setSpacing(14)
 
         self.health_panel = HealthPanelWidget(health_tab)
@@ -148,7 +167,7 @@ class MainWindow(QMainWindow):
         health_layout.addStretch()
         health_tab.setLayout(health_layout)
 
-        self.tabs.addTab(health_tab, "Battery Health & Retention")
+        self.tabs.addTab(self._scrollable(health_tab), "Battery Health && Retention")
 
         # 3. Status Bar
         self.status_bar = QStatusBar(self)
@@ -164,6 +183,16 @@ class MainWindow(QMainWindow):
         # 6. Shortcuts (Ctrl+S on Windows/Linux, Cmd+S on macOS)
         save_shortcut = QShortcut(QKeySequence(QKeySequence.StandardKey.Save), self)
         save_shortcut.activated.connect(self._on_save_shortcut)
+
+    @staticmethod
+    def _scrollable(content: QWidget) -> QScrollArea:
+        """Wrap a tab so small windows (e.g. Steam Deck) scroll instead of squashing widgets."""
+        area = QScrollArea()
+        area.setWidget(content)
+        area.setWidgetResizable(True)
+        area.setFrameShape(QScrollArea.Shape.NoFrame)
+        area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        return area
 
     def _setup_system_tray(self, icon: QIcon):
         """Configure system tray icon with quick actions."""
@@ -258,6 +287,12 @@ class MainWindow(QMainWindow):
 
     def _on_connection_changed(self, connected: bool, message: str):
         self.device_bar.update_connection_state(connected, message)
+        if connected or message == "Disconnected":
+            self.connection_banner.hide()
+        else:
+            hint = "" if self.bridge.simulate else "  Tick “Simulation Mode” to explore without a device."
+            self.connection_banner.setText(f"{message}{hint}")
+            self.connection_banner.show()
         self.status_bar.showMessage(f"Status: {message}")
 
     def _on_error_occurred(self, error_msg: str):

@@ -24,6 +24,7 @@ class NoiseControlWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("cardFrame")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(18, 16, 18, 16)
@@ -75,12 +76,15 @@ class NoiseControlWidget(QWidget):
         self._current_mode = state.noise_mode
         self.active_mode_lbl.setText(state.noise_mode_name)
 
-        if not profile.has_anc:
+        # Models such as Wave Buds have Ambient/TalkThru without ANC, so gate on
+        # any noise capability; with none, hide the whole card.
+        if not (profile.has_anc or profile.has_ambient_aware or profile.has_talkthru):
             for btn in self.buttons.values():
                 btn.setVisible(False)
                 btn.setEnabled(False)
-            self.active_mode_lbl.setText("Not Supported")
+            self.hide()
             return
+        self.show()
 
         # Capability checks: only show supported options
         capabilities = {

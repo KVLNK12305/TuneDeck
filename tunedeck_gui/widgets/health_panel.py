@@ -36,8 +36,10 @@ class MetricCard(QFrame):
 
     def __init__(self, title: str, parent=None):
         super().__init__(parent)
+        # Scoped by object name: a bare "QFrame" selector also matches the QLabel children.
+        self.setObjectName("metricCard")
         self.setStyleSheet(f"""
-            QFrame {{
+            QFrame#metricCard {{
                 background-color: {COLOR_BG_CARD_ALT};
                 border: 1px solid {COLOR_BORDER};
                 border-radius: 8px;
@@ -80,6 +82,7 @@ class HealthPanelWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("cardFrame")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(18, 16, 18, 16)
@@ -121,8 +124,9 @@ class HealthPanelWidget(QWidget):
 
         # Disclaimer Box
         disclaimer_box = QFrame()
+        disclaimer_box.setObjectName("disclaimerBox")
         disclaimer_box.setStyleSheet(f"""
-            QFrame {{
+            QFrame#disclaimerBox {{
                 background-color: rgba(255, 102, 0, 0.08);
                 border-left: 3px solid {COLOR_JBL_ORANGE};
                 padding: 6px 10px;

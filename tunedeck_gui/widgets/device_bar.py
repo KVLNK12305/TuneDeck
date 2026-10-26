@@ -137,12 +137,15 @@ class DeviceBarWidget(QWidget):
         self._connected = connected
         if connected:
             self.status_dot.setStyleSheet(f"color: {COLOR_ACCENT_GREEN}; font-size: 14px;")
-            self.status_text.setText(message or "Connected")
+            self.status_text.setText("Connected")
+            self.status_text.setToolTip(message)
             self.conn_btn.setText("Disconnect")
             self.power_btn.setEnabled(True)
         else:
             self.status_dot.setStyleSheet(f"color: {COLOR_ACCENT_RED}; font-size: 14px;")
-            self.status_text.setText(message or "Disconnected")
+            # Short label; the full reason is shown in the main window's banner
+            self.status_text.setText("Not connected")
+            self.status_text.setToolTip(message)
             self.conn_btn.setText("Connect")
             self.power_btn.setEnabled(False)
 

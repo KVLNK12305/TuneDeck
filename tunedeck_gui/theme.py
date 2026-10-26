@@ -28,19 +28,24 @@ COLOR_ACCENT_YELLOW = "#FFD600"
 COLOR_ACCENT_RED = "#FF3D57"
 
 DARK_STYLESHEET = f"""
-QMainWindow {{
-    background-color: {COLOR_BG_DARK};
-    color: {COLOR_TEXT_PRIMARY};
-}}
-
 QWidget {{
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
     color: {COLOR_TEXT_PRIMARY};
     background-color: transparent;
 }}
 
-/* Cards & Containers */
-QFrame#cardFrame {{
+/* Must follow the QWidget rule: equal specificity, so the later rule wins */
+QMainWindow {{
+    background-color: {COLOR_BG_DARK};
+    color: {COLOR_TEXT_PRIMARY};
+}}
+
+QScrollArea {{
+    border: none;
+}}
+
+/* Cards & Containers (widgets set WA_StyledBackground so this paints) */
+#cardFrame {{
     background-color: {COLOR_BG_CARD};
     border: 1px solid {COLOR_BORDER};
     border-radius: 12px;
@@ -150,6 +155,28 @@ QPushButton#segmentedItemDisabled {{
     background-color: {COLOR_BG_DARK};
     border: 1px solid {COLOR_BORDER};
     color: {COLOR_TEXT_MUTED};
+}}
+
+/* Check Box */
+QCheckBox {{
+    spacing: 8px;
+}}
+
+QCheckBox::indicator {{
+    width: 16px;
+    height: 16px;
+    border: 1px solid {COLOR_TEXT_MUTED};
+    border-radius: 4px;
+    background-color: {COLOR_BG_CARD};
+}}
+
+QCheckBox::indicator:hover {{
+    border-color: {COLOR_JBL_ORANGE};
+}}
+
+QCheckBox::indicator:checked {{
+    background-color: {COLOR_JBL_ORANGE};
+    border-color: {COLOR_JBL_ORANGE};
 }}
 
 /* Combo Box */

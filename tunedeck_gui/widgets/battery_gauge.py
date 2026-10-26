@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QLinearGradient
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 
+from jblpc.models import DeviceCategory
 from ..theme import (
     COLOR_BG_CARD,
     COLOR_BORDER,
@@ -17,6 +18,14 @@ from ..theme import (
     COLOR_TEXT_SECONDARY,
     COLOR_TEXT_MUTED,
 )
+
+
+SINGLE_DIAL_LABELS = {
+    DeviceCategory.OVER_EAR: "HEADPHONES",
+    DeviceCategory.TWS: "EARBUDS",
+    DeviceCategory.SPEAKER: "SPEAKER",
+    DeviceCategory.PARTYBOX: "SPEAKER",
+}
 
 
 class CircularDial(QWidget):
@@ -105,6 +114,7 @@ class BatteryGaugeWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("cardFrame")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self._main_layout = QVBoxLayout(self)
         self._main_layout.setContentsMargins(18, 16, 18, 16)
@@ -144,11 +154,11 @@ class BatteryGaugeWidget(QWidget):
         self.dials_layout.addWidget(self.dial_left)
         self.dials_layout.addWidget(self.dial_right)
         self.dials_layout.addWidget(self.dial_case)
+        self._main_layout.addStretch()
 
     def update_from_state(self, state):
         """Update dial readings based on HeadsetState."""
-        profile = state.profile
-        is_tws = profile.battery_scheme.value == "tws_trio"
+        is_tws = state.shows_tws_trio
 
         if is_tws:
             self.single_dial.hide()
@@ -169,6 +179,7 @@ class BatteryGaugeWidget(QWidget):
             self.dial_right.hide()
             self.dial_case.hide()
             self.single_dial.show()
+            self.single_dial.label = SINGLE_DIAL_LABELS.get(state.profile.category, "BATTERY")
 
             self.single_dial.set_state(state.battery_level)
             if state.battery_level >= 0:
