@@ -46,6 +46,7 @@ def gui_instance(qapp):
 
     win.close()
     bridge.disconnect_device()
+    bridge.shutdown()
 
 
 def test_main_window_components(gui_instance):
