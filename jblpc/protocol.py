@@ -4,7 +4,11 @@ Airoha RACE protocol implementation for JBL headphones, earbuds, and speakers.
 Handles RFCOMM communication, packet framing, and command encoding/decoding.
 Based on community reverse-engineering of the Airoha RACE protocol.
 
-Protocol frame format:
+Only the frame layout and the noise-control commands below have been
+exercised on real hardware. Opcodes marked UNVERIFIED are guesses that no
+response from a real device has confirmed.
+
+Protocol frame format (no checksum byte):
 ┌──────────┬──────────┬──────────┬──────────┬──────────┐
 │  0x05    │  Type    │  Length  │  Opcode  │ Payload  │
 │  (magic) │  (1B)    │  (2B LE) │  (2B LE) │ (var)    │
@@ -20,6 +24,7 @@ import re
 import os
 import sys
 import json
+import shutil
 from pathlib import Path
 from dataclasses import dataclass, field
 from enum import IntEnum
@@ -123,48 +128,24 @@ NOISE_SETTERS = {
     NoiseMode.TALKTHRU: bytes.fromhex("000A09"),
 }
 
-# Known opcodes
-OP_NOISE_SET = 0x0E06          # Set noise control mode (verified Airoha RACE command for JBL)
-OP_NOISE_SET_LEGACY = 0x0908   # Legacy/fallback noise set opcode
-OP_NOISE_GET = 0x0901          # Get/response noise control mode
+# Opcodes
+OP_NOISE_SET = 0x0E06          # Set noise control mode (confirmed on a physical headset)
+OP_NOISE_GET = 0x0901          # Get/response noise control mode (confirmed on a physical headset)
 OP_NOISE_GET_PAYLOAD = bytes.fromhex("0500")  # Query payload for noise status
-OP_BATTERY_PERCENTAGE = 0x0403 # Battery percentage reading
-OP_BATTERY_GET = 0x0402        # Battery status / PMU register
-OP_POWER_OFF = 0x0104          # Power off the device
-OP_EQ_SET = 0x0A01             # Set EQ
-OP_EQ_GET = 0x0A02             # Get EQ
-OP_DEVICE_INFO = 0x0201        # Device info request
-
-
-# ─── Checksum Calculation ────────────────────────────────────────────────────
-
-def calculate_checksum(data: bytes) -> int:
-    """Calculate 8-bit two's complement checksum for a RACE frame."""
-    return (-sum(data)) & 0xFF
-
-
-def verify_checksum(data_with_checksum: bytes) -> bool:
-    """Verify that the checksum byte at the end of the data matches."""
-    if len(data_with_checksum) < 2:
-        return False
-    expected = calculate_checksum(data_with_checksum[:-1])
-    return data_with_checksum[-1] == expected
+OP_BATTERY_PERCENTAGE = 0x0403 # Battery percentage reading (UNVERIFIED; OS battery is preferred)
+OP_BATTERY_GET = 0x0402        # Battery status / PMU register (UNVERIFIED)
+OP_POWER_OFF = 0x0104          # Power off the device (UNVERIFIED)
+OP_EQ_SET = 0x0A01             # Set EQ (UNVERIFIED; payload format is a guess)
 
 
 # ─── Frame Building & Parsing ────────────────────────────────────────────────
 
-def build_request(opcode: int, payload: bytes = b"", with_checksum: bool = False) -> bytes:
+def build_request(opcode: int, payload: bytes = b"") -> bytes:
     """Build an Airoha RACE request frame."""
     length = 2 + len(payload)
-    if with_checksum:
-        length += 1
     header = struct.pack("<BBH", MAGIC_BYTE, FRAME_TYPE_REQUEST, length)
     op = struct.pack("<H", opcode)
-    frame = header + op + payload
-    if with_checksum:
-        chk = calculate_checksum(frame)
-        frame += bytes([chk])
-    return frame
+    return header + op + payload
 
 
 @dataclass
@@ -174,7 +155,6 @@ class Frame:
     opcode: int
     payload: bytes
     timestamp: str = ""
-    has_valid_checksum: bool = True
 
     def __post_init__(self):
         if not self.timestamp:
@@ -197,7 +177,7 @@ class Frame:
                 return NoiseMode(self.payload[3])
             except ValueError:
                 return None
-        if self.opcode in (OP_NOISE_SET, OP_NOISE_SET_LEGACY) and len(self.payload) >= 2:
+        if self.opcode == OP_NOISE_SET and len(self.payload) >= 2:
             if self.payload.startswith(b"\x00\x0b"):
                 return NoiseMode.OFF
             elif self.payload.startswith(b"\x00\x0a\x01"):
@@ -228,10 +208,7 @@ class Frame:
         )
 
 
-def parse_frames(
-    buf: bytes,
-    verify_checksum_byte: bool = False,
-) -> tuple[list[Frame], bytes]:
+def parse_frames(buf: bytes) -> tuple[list[Frame], bytes]:
     """
     Parse complete frames from a byte buffer.
     Discards garbage bytes before the magic byte and oversized frames.
@@ -265,20 +242,7 @@ def parse_frames(
             break
 
         opcode = struct.unpack_from("<H", buf, 4)[0]
-
-        if verify_checksum_byte:
-            # Checksum is the last byte
-            frame_data = buf[:total - 1]
-            actual_checksum = buf[total - 1]
-            expected_checksum = calculate_checksum(frame_data)
-            if actual_checksum != expected_checksum:
-                raise ProtocolError(
-                    f"Frame checksum mismatch: expected 0x{expected_checksum:02X}, "
-                    f"got 0x{actual_checksum:02X}"
-                )
-            payload = buf[6:total - 1]
-        else:
-            payload = buf[6:total]
+        payload = buf[6:total]
 
         frames.append(Frame(frame_type, opcode, payload))
         buf = buf[total:]
@@ -345,6 +309,18 @@ def save_config(config: dict):
 
 # ─── Bluetooth Connection ────────────────────────────────────────────────────
 
+def rfcomm_unsupported_reason() -> Optional[str]:
+    """Why this Python can't open RFCOMM sockets (e.g. macOS), or None if it can."""
+    if hasattr(socket, "AF_BLUETOOTH") and hasattr(socket, "BTPROTO_RFCOMM"):
+        return None
+    if sys.platform == "darwin":
+        return (
+            "Hardware control isn't available on macOS: Python has no Bluetooth RFCOMM sockets there. "
+            "Use simulation mode (tunedeck --sim / tunedeck-gui --sim)."
+        )
+    return "Hardware control isn't available here: this Python has no Bluetooth RFCOMM socket support."
+
+
 class BluetoothConnection:
     """Manages the Bluetooth RFCOMM socket connection to the device."""
 
@@ -373,14 +349,9 @@ class BluetoothConnection:
             self.last_error = f"Invalid Bluetooth MAC address: '{self.address}'."
             return False
 
-        if not hasattr(socket, "AF_BLUETOOTH"):
-            if sys.platform == "darwin":
-                self.last_error = (
-                    "Bluetooth sockets (AF_BLUETOOTH) are not supported natively by Python on macOS. "
-                    "Use simulation mode (tunedeck --sim / tunedeck-gui --sim) or an RFCOMM serial bridge."
-                )
-            else:
-                self.last_error = "Bluetooth sockets (AF_BLUETOOTH) are not supported on this platform."
+        unsupported = rfcomm_unsupported_reason()
+        if unsupported:
+            self.last_error = unsupported
             return False
 
         try:
@@ -434,12 +405,11 @@ class BluetoothConnection:
             self.disconnect()
             return False
 
-    def send_command(self, opcode: int, payload: bytes = b"", with_checksum: bool = False) -> bool:
+    def send_command(self, opcode: int, payload: bytes = b"") -> bool:
         """Build and send a protocol command."""
-        frame = build_request(opcode, payload, with_checksum=with_checksum)
-        return self.send(frame)
+        return self.send(build_request(opcode, payload))
 
-    def receive(self, timeout: float = 2.0, verify_checksum_byte: bool = False) -> list[Frame]:
+    def receive(self, timeout: float = 2.0) -> list[Frame]:
         """Receive and parse protocol frames non-blocking with timeout."""
         if not self.connected:
             return []
@@ -468,7 +438,7 @@ class BluetoothConnection:
                 self.disconnect()
                 break
 
-            parsed, self._buffer = parse_frames(self._buffer, verify_checksum_byte=verify_checksum_byte)
+            parsed, self._buffer = parse_frames(self._buffer)
             frames.extend(parsed)
 
             if frames:
@@ -482,12 +452,11 @@ class BluetoothConnection:
         payload: bytes = b"",
         timeout: float = 2.0,
         expect_opcode: Optional[int] = None,
-        verify_checksum_byte: bool = False,
     ) -> list[Frame]:
         """Send a command and wait for response frames."""
         if not self.send_command(opcode, payload):
             return []
-        frames = self.receive(timeout, verify_checksum_byte=verify_checksum_byte)
+        frames = self.receive(timeout)
         if expect_opcode is not None and frames:
             if frames[0].opcode != expect_opcode:
                 raise ProtocolError(
@@ -498,21 +467,20 @@ class BluetoothConnection:
 
 
 def is_jbl_device_name(name: str) -> bool:
-    """Check if a Bluetooth broadcast name belongs to a JBL device."""
+    """Check if a Bluetooth broadcast name belongs to a JBL device.
+
+    JBL devices broadcast names that start with or contain "JBL". Bare product
+    words ("Live", "Charge", "Club", "770") are too common to match on, so
+    renamed devices are recognised via the vendor ID instead (is_harman_jbl_info).
+    """
     if not name or not isinstance(name, str):
         return False
-    u = name.upper()
-    if "JBL" in u:
-        return True
-    keywords = [
-        "TUNE", "LIVE", "TOUR", "FLIP", "CHARGE", "XTREME", "BOOMBOX",
-        "PULSE", "PARTYBOX", "ENDURANCE", "WAVE", "VIBE", "BEAM", "FLEX",
-        "REFLECT", "QUANTUM", "CLUB", "EVEREST", "UNDER ARMOUR", "770", "760", "720", "710", "670", "660", "520", "510"
-    ]
-    return any(k in u for k in keywords)
+    return "JBL" in name.upper()
 
 
-HARMAN_VENDOR_REGEX = re.compile(r"Modalias:\s*bluetooth:v(0ECB|0057)", re.IGNORECASE)
+# Harman's Bluetooth SIG company IDs: 0x0057 (Harman International Industries)
+# and 0x075A (HARMAN CO.,LTD.).
+HARMAN_VENDOR_REGEX = re.compile(r"Modalias:\s*bluetooth:v(0057|075A)", re.IGNORECASE)
 AIROHA_RACE_UUID = "5052494d-2dab-0341-6972-6f6861424c45"
 
 
@@ -520,7 +488,7 @@ def is_harman_jbl_info(info_stdout: str) -> tuple[bool, str]:
     """
     Examines bluetoothctl info output.
     Returns (is_jbl, hardware_name).
-    Identifies JBL devices via Harman Bluetooth SIG Vendor ID (0x0ECB / 0x0057),
+    Identifies JBL devices via Harman Bluetooth SIG vendor ID (0x0057 / 0x075A),
     Airoha RACE protocol UUID, or factory hardware broadcast Name.
     """
     if not info_stdout:
@@ -548,7 +516,7 @@ def find_windows_jbl_devices() -> list[dict]:
         cmd = [
             "powershell.exe", "-NoProfile", "-Command",
             "Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue | "
-            "Where-Object { $_.FriendlyName -match 'JBL|Tune|Live|Tour|Flip|Charge|Pulse|PartyBox|Xtreme|Boombox|Endurance|Wave|Vibe|Beam|Flex|770' -or $_.InstanceId -match '0ECB|0057' } | "
+            "Where-Object { $_.FriendlyName -match 'JBL' -or $_.InstanceId -match 'VID&0001(0057|075A)' } | "
             "Select-Object FriendlyName, InstanceId, Status | ConvertTo-Json"
         ]
         res = subprocess.run(cmd, capture_output=True, timeout=5, text=True)
@@ -558,7 +526,7 @@ def find_windows_jbl_devices() -> list[dict]:
             for item in items:
                 name = item.get("FriendlyName", "").strip()
                 inst_id = item.get("InstanceId", "")
-                is_harman_id = bool(re.search(r"0ECB|0057", inst_id, re.IGNORECASE))
+                is_harman_id = bool(re.search(r"VID&0001(0057|075A)", inst_id, re.IGNORECASE))
                 if not (is_jbl_device_name(name) or is_harman_id):
                     continue
                 status = item.get("Status", "")
@@ -598,7 +566,7 @@ def find_macos_jbl_devices() -> list[dict]:
                                 is_mfr_harman = False
                                 if isinstance(dev_info, dict):
                                     mfr = str(dev_info.get("device_manufacturer", "")).lower()
-                                    if "harman" in mfr or "0x0ecb" in mfr or "0x0057" in mfr:
+                                    if "harman" in mfr or "0x0057" in mfr or "0x075a" in mfr:
                                         is_mfr_harman = True
                                 if is_jbl_device_name(dev_name) or is_mfr_harman:
                                     addr = ""
@@ -622,6 +590,28 @@ def check_bluetoothctl_available():
         raise BluetoothAdapterError("bluetoothctl utility is not installed on this system.")
     except subprocess.TimeoutExpired:
         raise BluetoothAdapterError("bluetoothctl timed out checking version.")
+    check_bluetooth_service_running()
+
+
+def check_bluetooth_service_running():
+    """Fail fast when the BlueZ daemon is stopped; bluetoothctl otherwise blocks until timeout.
+
+    Only checked where systemd is available (not inside Flatpak sandboxes).
+    """
+    if not shutil.which("systemctl"):
+        return
+    try:
+        res = subprocess.run(
+            ["systemctl", "is-active", "bluetooth"], capture_output=True, text=True, timeout=3
+        )
+    except (OSError, subprocess.SubprocessError):
+        return
+    state = res.stdout.strip() if isinstance(res.stdout, str) else ""
+    if state in ("inactive", "failed"):
+        raise BluetoothAdapterError(
+            "The Bluetooth service is not running. "
+            "Start it with: sudo systemctl enable --now bluetooth"
+        )
 
 
 def check_bluetooth_adapter_powered():
@@ -638,17 +628,16 @@ def check_bluetooth_adapter_powered():
                 return
         except BluetoothAdapterError:
             raise
-        except Exception as err:
-            err_msg = str(err)
+        except Exception:
+            pass  # PowerShell unavailable; fall back to opening a socket
 
         if hasattr(socket, "AF_BLUETOOTH"):
             try:
                 s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
                 s.close()
-                return
             except Exception as e:
                 raise BluetoothAdapterError("Bluetooth adapter is powered off or missing.") from e
-            return
+        return
     elif sys.platform == "darwin":
         try:
             res = subprocess.run(["system_profiler", "SPBluetoothDataType", "-json"],
@@ -664,8 +653,8 @@ def check_bluetooth_adapter_powered():
                     return
         except BluetoothAdapterError:
             raise
-        except Exception as err:
-            err_msg = str(err)
+        except Exception:
+            pass  # Adapter state unknown; the connect attempt will report failures
         return
 
     # Linux (BlueZ / bluetoothctl)
@@ -806,15 +795,17 @@ def check_device_connected(address: str) -> bool:
             res = subprocess.run(cmd, capture_output=True, timeout=4, text=True)
             if res.returncode == 0:
                 return "OK" in res.stdout
-        except Exception as err:
-            return True
+        except Exception:
+            pass
+        # Status unknown; let the RFCOMM connect attempt decide.
         return True
     elif sys.platform == "darwin":
         try:
             devs = find_macos_jbl_devices()
             norm = address.upper().replace("-", ":")
             return any(d.get("address", "").upper() == norm for d in devs)
-        except Exception as err:
+        except Exception:
+            # Status unknown; let the RFCOMM connect attempt decide.
             return True
 
     # Linux (BlueZ / bluetoothctl)
@@ -850,17 +841,17 @@ def check_device_paired(address: str) -> bool:
             res = subprocess.run(cmd, capture_output=True, timeout=4, text=True)
             if res.returncode == 0:
                 return int(res.stdout.strip() or "0") > 0
-        except Exception as err:
-            return True
+        except Exception:
+            pass
+        # Status unknown; let the RFCOMM connect attempt decide.
         return True
     elif sys.platform == "darwin":
         try:
             devs = find_macos_jbl_devices()
             norm = address.upper().replace("-", ":")
-            if any(d.get("address", "").upper() == norm for d in devs if d.get("address")):
-                return True
-            return len(devs) > 0
-        except Exception as err:
+            return any(d.get("address", "").upper() == norm for d in devs if d.get("address"))
+        except Exception:
+            # Status unknown; let the RFCOMM connect attempt decide.
             return True
 
     # Linux (BlueZ / bluetoothctl)

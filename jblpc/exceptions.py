@@ -37,7 +37,7 @@ JBLConnectionError = ConnectionError
 
 
 class ProtocolError(JBLPcError):
-    """Raised when a frame is malformed, has invalid checksum, unexpected opcode, or corrupt payload."""
+    """Raised when a frame is malformed, has an unexpected opcode, or corrupt payload."""
     pass
 
 

@@ -1,9 +1,11 @@
 """
 Device profile registry and model definitions for JBL devices.
 
-Enables TuneDeck to support a wide spectrum of JBL devices (Tune, Live, Tour,
-Club, Wave/Vibe TWS, and Portable Speakers) through metadata profiles and
-intelligent matching, even without physical access to every model.
+Capability profiles for JBL devices (Tune, Live, Tour, Club, Wave/Vibe TWS,
+and portable speakers), matched by broadcast name. Profiles drive which
+controls the UI shows; they are compiled from public product specs, not
+tested against each model. Hardware control is only implemented for the
+Airoha RACE protocol family; speaker/PartyBox profiles work in --sim only.
 """
 
 from dataclasses import dataclass, field
@@ -21,7 +23,7 @@ class DeviceCategory(Enum):
 
 
 class ProtocolFamily(Enum):
-    AIROHA_RACE = "Airoha RACE (RFCOMM 21 / BLE)"
+    AIROHA_RACE = "Airoha RACE (RFCOMM 21)"
     JBL_PORTABLE = "JBL Portable / PartyBoost"
     PARTYBOX = "JBL PartyBox"
     QUANTUM = "JBL Quantum Gaming"

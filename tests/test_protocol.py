@@ -1,5 +1,5 @@
 """
-Unit tests for Airoha RACE protocol framing, building, parsing, and checksums.
+Unit tests for Airoha RACE protocol framing, building, and parsing.
 """
 
 import pytest
@@ -16,8 +16,6 @@ from jblpc.protocol import (
     NoiseMode,
     build_request,
     parse_frames,
-    calculate_checksum,
-    verify_checksum,
     Frame,
     is_valid_mac,
     ProtocolError,
@@ -57,29 +55,6 @@ def test_build_request_with_payload():
     assert len(frame) == 6 + len(payload)
     assert frame[2:4] == struct.pack("<H", 2 + len(payload))
     assert frame[6:] == payload
-
-
-@pytest.mark.protocol
-def test_checksum_calculation_and_verification():
-    """Verify 8-bit checksum calculation and validation."""
-    data = bytes([0x05, 0x5A, 0x02, 0x00, 0x02, 0x04])
-    chk = calculate_checksum(data)
-    assert 0 <= chk <= 255
-    data_with_chk = data + bytes([chk])
-    assert verify_checksum(data_with_chk)
-
-    # Corrupt a byte
-    corrupted = bytearray(data_with_chk)
-    corrupted[2] ^= 0xFF
-    assert not verify_checksum(bytes(corrupted))
-
-
-@pytest.mark.protocol
-def test_build_request_with_checksum():
-    """Build request frame with embedded checksum."""
-    frame = build_request(OP_BATTERY_GET, with_checksum=True)
-    assert len(frame) == 7
-    assert verify_checksum(frame)
 
 
 @pytest.mark.protocol
@@ -152,14 +127,6 @@ def test_parse_oversized_frame():
     oversized = bytes([0x05, FRAME_TYPE_RESPONSE, 0xE8, 0xFD, 0x02, 0x04])
     frames, remaining = parse_frames(oversized)
     assert frames == []
-
-
-@pytest.mark.protocol
-def test_parse_bad_checksum():
-    """Frames with invalid checksum raise ProtocolError when validation is enabled."""
-    frame_with_bad_chk = bytes([0x05, FRAME_TYPE_RESPONSE, 0x03, 0x00, 0x02, 0x04, 0x55, 0x00])
-    with pytest.raises(ProtocolError, match="Frame checksum mismatch"):
-        parse_frames(frame_with_bad_chk, verify_checksum_byte=True)
 
 
 @pytest.mark.protocol
