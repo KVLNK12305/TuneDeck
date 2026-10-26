@@ -7,6 +7,7 @@ Safety constraints:
   - Skips unless `--hardware` flag is passed to pytest
   - Skips unless `JBL_BD` environment variable is set
   - Destructive power-off requires `JBLPC_ALLOW_POWEROFF=1` explicitly
+    (plus `TUNEDECK_EXPERIMENTAL=1`, since the power-off opcode is unverified)
 """
 
 import os
@@ -73,6 +74,8 @@ def test_hardware_safe_poweroff(hardware_target):
     allow = os.environ.get("TUNEDECK_ALLOW_POWEROFF", os.environ.get("JBLPC_ALLOW_POWEROFF", "")).strip()
     if allow != "1":
         pytest.skip("Destructive power-off requires TUNEDECK_ALLOW_POWEROFF=1 or JBLPC_ALLOW_POWEROFF=1 environment variable.")
+    if os.environ.get("TUNEDECK_EXPERIMENTAL", "").strip() != "1":
+        pytest.skip("Power-off uses an unverified opcode; set TUNEDECK_EXPERIMENTAL=1 to test it.")
 
     controller = HeadsetController(bt_address=hardware_target, simulate=False)
     assert controller.connect() is True

@@ -23,7 +23,6 @@ from jblpc.protocol import (
     save_config,
     parse_frames,
     build_request,
-    calculate_checksum,
     check_bluetooth_adapter_powered,
     check_bluetoothctl_available,
     check_device_paired,
@@ -103,7 +102,7 @@ def test_fault_invalid_or_missing_mac(isolated_env):
     # Missing MAC
     controller_empty = HeadsetController(bt_address="", simulate=False)
     assert controller_empty.connect() is False
-    assert "No Bluetooth address" in controller_empty.last_error
+    assert "No JBL device found" in controller_empty.last_error
 
     # Invalid MAC
     controller_inv = HeadsetController(bt_address="invalid_mac", simulate=False)
@@ -202,15 +201,29 @@ def test_fault_partial_frame(isolated_env):
     assert rem == partial
 
 
-# 12. Bad checksum
+# 12. Unverified command on hardware
 @pytest.mark.fault
-def test_fault_bad_checksum(isolated_env):
-    """Simulate bad checksum; parser must raise ProtocolError when validation is enabled."""
-    frame_bytes = bytearray(build_request(OP_BATTERY_GET, with_checksum=True))
-    frame_bytes[-1] ^= 0xFF  # Corrupt checksum byte
-    with pytest.raises(ProtocolError) as exc_info:
-        parse_frames(bytes(frame_bytes), verify_checksum_byte=True)
-    assert "checksum mismatch" in str(exc_info.value).lower()
+def test_fault_unverified_command_blocked(isolated_env, monkeypatch):
+    """EQ and power-off use unverified opcodes; nothing is sent unless TUNEDECK_EXPERIMENTAL=1."""
+    from jblpc.protocol import EQPreset
+
+    monkeypatch.delenv("TUNEDECK_EXPERIMENTAL", raising=False)
+    fake_sock = FakeRFCOMMSocket()
+    conn = FakeBluetoothConnection("11:22:33:44:55:66", channel=21, fake_socket=fake_sock)
+    controller = HeadsetController(bt_address="", model_id="tune_770nc", connection=conn)
+    assert conn.connect() is True
+    controller.state.connected = True
+
+    assert controller.set_eq_preset(EQPreset.BASS) is False
+    assert "TUNEDECK_EXPERIMENTAL" in controller.last_error
+    assert controller.set_eq_bands([0] * 10) is False
+    assert controller.power_off() is False
+    assert "TUNEDECK_EXPERIMENTAL" in controller.last_error
+    assert fake_sock.sent_data == []
+
+    monkeypatch.setenv("TUNEDECK_EXPERIMENTAL", "1")
+    assert controller.set_eq_preset(EQPreset.BASS) is True
+    assert len(fake_sock.sent_data) == 1
 
 
 # 13. Unexpected response opcode

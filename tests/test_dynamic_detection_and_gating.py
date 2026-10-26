@@ -10,6 +10,7 @@ from jblpc.protocol import (
     find_jbl_devices,
     get_active_jbl_device,
     is_harman_jbl_info,
+    is_jbl_device_name,
     NoiseMode,
 )
 from jblpc.models import (
@@ -25,13 +26,13 @@ class TestDynamicDeviceDetection:
     """Validate companion-app-level dynamic Bluetooth detection without hardcoded MACs."""
 
     def test_harman_vendor_id_signature_detection(self):
-        """Even if the user renamed the device to 'Office Audio', Modalias v0ECB identifies it as JBL."""
+        """Even if the user renamed the device to 'Office Audio', Harman's SIG ID 0x0057 identifies it as JBL."""
         fake_info = (
             "Device 11:22:33:44:55:66 (public)\n"
             "\tName: JBL Tune 770NC\n"
             "\tAlias: Office Audio\n"
             "\tConnected: yes\n"
-            "\tModalias: bluetooth:v0ECBp20B7d0100\n"
+            "\tModalias: bluetooth:v0057p20B7d0100\n"
             "\tUUID: Vendor specific (5052494d-2dab-0341-6972-6f6861424c45)\n"
         )
         is_jbl, name = is_harman_jbl_info(fake_info)
@@ -50,6 +51,19 @@ class TestDynamicDeviceDetection:
         is_jbl, name = is_harman_jbl_info(fake_info)
         assert is_jbl is False
 
+    def test_vendor_ids(self):
+        """Only Harman's Bluetooth SIG IDs match; 0x0ECB is assigned to a different company."""
+        for vid, expected in [("0057", True), ("075A", True), ("0ECB", False)]:
+            info = f"Device 11:22:33:44:55:66\n\tAlias: Desk\n\tModalias: bluetooth:v{vid}p2050d0100\n"
+            assert is_harman_jbl_info(info)[0] is expected, vid
+
+    def test_generic_product_words_are_not_jbl(self):
+        """Names like 'Live Audio' or 'Car Charger' must not be treated as JBL devices."""
+        assert is_jbl_device_name("JBL Tune 770NC")
+        assert is_jbl_device_name("jbl flip 6")
+        for name in ["Live Audio", "Car Charger", "Club Speaker", "Galaxy Buds Live", "Tour Bus 770"]:
+            assert not is_jbl_device_name(name)
+
     @patch("jblpc.protocol.check_bluetoothctl_available")
     @patch("subprocess.run")
     def test_active_connected_device_takes_precedence(self, mock_run, mock_check):
@@ -62,7 +76,7 @@ class TestDynamicDeviceDetection:
             elif cmd == ["bluetoothctl", "devices"]:
                 mock.stdout = b"Device AA:BB:CC:DD:EE:FF JBL Tune 770NC\nDevice CC:DD:EE:FF:00:11 JBL Flip 6\n"
             elif len(cmd) >= 3 and cmd[1] == "info":
-                mock.stdout = b"Device CC:DD:EE:FF:00:11\n\tName: JBL Flip 6\n\tConnected: yes\n\tModalias: bluetooth:v0ECBp1234\n"
+                mock.stdout = b"Device CC:DD:EE:FF:00:11\n\tName: JBL Flip 6\n\tConnected: yes\n\tModalias: bluetooth:v0057p1234\n"
             else:
                 mock.stdout = b""
             return mock
@@ -157,3 +171,49 @@ class TestModelCapabilityGating:
             assert bands_c.display is False
             assert presets_box.display is False
             assert unsupported.display is True
+
+
+class TestHardwareScope:
+    """Hardware paths only claim what is implemented."""
+
+    @patch("jblpc.controller.check_device_connected", return_value=True)
+    @patch("jblpc.controller.check_device_paired", return_value=True)
+    @patch("jblpc.controller.check_bluetooth_adapter_powered")
+    @patch("jblpc.controller.find_jbl_devices", return_value=[])
+    @patch("jblpc.controller.get_active_jbl_device", return_value=None)
+    def test_speaker_hardware_control_not_implemented(
+        self, _active, _find, _adapter, _paired, _connected, isolated_env
+    ):
+        """Speakers use a non-RACE protocol; connecting must fail with a clear message, not send RACE frames."""
+        from tests.conftest import FakeRFCOMMSocket, FakeBluetoothConnection
+
+        fake_sock = FakeRFCOMMSocket()
+        conn = FakeBluetoothConnection("AA:BB:CC:DD:EE:FF", fake_socket=fake_sock)
+        ctrl = HeadsetController(bt_address="AA:BB:CC:DD:EE:FF", model_id="flip_6", connection=conn)
+        assert ctrl.connect() is False
+        assert "not implemented" in ctrl.last_error
+        assert fake_sock.sent_data == []
+
+    def test_tws_hardware_shows_single_level(self, isolated_env):
+        """On hardware only an overall level is read, so TWS displays fall back to it."""
+        ctrl = HeadsetController(bt_address="", model_id="tune_230nc_tws")
+        assert ctrl.state.shows_tws_trio is True  # nothing known yet
+        ctrl.state.battery_level = 80
+        assert ctrl.state.shows_tws_trio is False
+        ctrl.state.battery_left = 70
+        assert ctrl.state.shows_tws_trio is True
+
+    @patch("jblpc.controller.check_bluetooth_adapter_powered")
+    @patch("jblpc.controller.find_jbl_devices", return_value=[])
+    @patch("jblpc.controller.get_active_jbl_device", return_value=None)
+    def test_no_rfcomm_platform_fails_fast(self, _active, _find, adapter_check, isolated_env, monkeypatch):
+        """On macOS (no RFCOMM sockets) connect fails immediately with a clear message, before slow system probes."""
+        import socket
+        import sys
+
+        monkeypatch.delattr(socket, "AF_BLUETOOTH", raising=False)
+        monkeypatch.setattr(sys, "platform", "darwin")
+        ctrl = HeadsetController(bt_address="AA:BB:CC:DD:EE:FF", model_id="tune_770nc")
+        assert ctrl.connect() is False
+        assert "macOS" in ctrl.last_error and "--sim" in ctrl.last_error
+        adapter_check.assert_not_called()

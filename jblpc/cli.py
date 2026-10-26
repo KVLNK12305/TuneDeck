@@ -84,7 +84,7 @@ def cmd_status(controller: HeadsetController, json_output: bool = False) -> int:
     table.add_row("Category", status["category"])
     table.add_row("Connected", "[green]Yes[/]" if status["connected"] else "[red]No[/]")
 
-    if status.get("battery_scheme") == "tws_trio":
+    if status.get("shows_tws_trio"):
         table.add_row("Left Earbud", f"[green]{status['battery_left']}%[/]" if status['battery_left'] >= 0 else "Unknown")
         table.add_row("Right Earbud", f"[green]{status['battery_right']}%[/]" if status['battery_right'] >= 0 else "Unknown")
         table.add_row("Charging Case", f"[cyan]{status['battery_case']}%[/]" if status['battery_case'] >= 0 else "Unknown")
@@ -209,9 +209,7 @@ def cmd_battery(controller: HeadsetController) -> int:
         return 1
 
     level = controller.get_battery()
-    scheme = controller.state.profile.battery_scheme.value
-
-    if scheme == "tws_trio":
+    if controller.state.shows_tws_trio:
         l = controller.state.battery_left
         r = controller.state.battery_right
         c = controller.state.battery_case

@@ -39,7 +39,6 @@ from typing import Optional
 from textual.css.query import NoMatches
 from ..controller import HeadsetController, HeadsetState
 from ..protocol import NoiseMode, EQPreset, EQ_PRESET_NAMES, MODE_NAMES
-from ..models import BatteryScheme
 from ..health import BatteryHealthTracker
 
 
@@ -78,7 +77,7 @@ class BatteryWidget(Static):
     def update_battery(self, level: int, state: Optional[HeadsetState] = None):
         display = self.query_one("#battery-display", Static)
 
-        if state and state.profile.battery_scheme == BatteryScheme.TWS_TRIO:
+        if state and state.shows_tws_trio:
             l = state.battery_left
             r = state.battery_right
             c = state.battery_case

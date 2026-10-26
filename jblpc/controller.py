@@ -5,6 +5,7 @@ Provides a clean API over the raw Bluetooth protocol, with simulation mode
 for development/testing without the actual headset.
 """
 
+import os
 import random
 import time
 from dataclasses import dataclass, field
@@ -25,7 +26,6 @@ from .protocol import (
     OP_BATTERY_GET,
     OP_POWER_OFF,
     OP_EQ_SET,
-    OP_DEVICE_INFO,
     load_config,
     save_config,
     find_jbl_devices,
@@ -35,6 +35,7 @@ from .protocol import (
     check_bluetooth_adapter_powered,
     get_system_battery_level,
     is_valid_mac,
+    rfcomm_unsupported_reason,
 )
 from .models import (
     DeviceProfile,
@@ -55,6 +56,17 @@ from .exceptions import (
     UnsupportedCommandError,
 )
 from .health import BatteryHealthTracker, generate_synthetic_history
+
+
+def experimental_commands_enabled() -> bool:
+    """Whether commands with unverified opcodes (EQ, power-off) may be sent to hardware."""
+    return os.environ.get("TUNEDECK_EXPERIMENTAL", "").strip() == "1"
+
+
+EXPERIMENTAL_HINT = (
+    "this command uses an unverified protocol opcode; "
+    "set TUNEDECK_EXPERIMENTAL=1 to send it anyway"
+)
 
 
 @dataclass
@@ -87,6 +99,18 @@ class HeadsetState:
             return "🔋"
         else:
             return "🔋"
+
+    @property
+    def shows_tws_trio(self) -> bool:
+        """Show Left/Right/Case levels unless only an overall level is known.
+
+        On hardware only a single battery level is read (per-bud levels are not
+        decoded yet), so TWS devices fall back to the single-level display.
+        """
+        if self.profile.battery_scheme != BatteryScheme.TWS_TRIO:
+            return False
+        has_buds = self.battery_left >= 0 or self.battery_right >= 0
+        return has_buds or self.battery_level < 0
 
     @property
     def noise_mode_name(self) -> str:
@@ -125,6 +149,7 @@ class HeadsetController:
 
         # 1. Dynamic active JBL device discovery (no hardcoded MACs)
         active_dev = None
+        self._discovery_error: Optional[str] = None
         if not simulate and not explicit_empty:
             try:
                 active_dev = get_active_jbl_device()
@@ -137,8 +162,8 @@ class HeadsetController:
                     bt_address = active_dev["address"]
                     if not model_name and active_dev.get("name"):
                         model_name = active_dev["name"]
-            except Exception:
-                pass
+            except Exception as e:
+                self._discovery_error = str(e)
 
         if bt_address is None:
             bt_address = ""
@@ -260,8 +285,18 @@ class HeadsetController:
             self._notify()
             return True
 
+        # Fail fast where RFCOMM can't work at all (macOS), before slow system probes
+        unsupported = rfcomm_unsupported_reason()
+        if unsupported:
+            self.last_error = unsupported
+            self._add_log(f"✗ {self.last_error}")
+            return False
+
         if not self.state.bt_address:
-            self.last_error = "No Bluetooth address configured. Set JBL_BD or run 'jblpc cli scan'."
+            self.last_error = self._discovery_error or (
+                "No JBL device found. Pair it in your system Bluetooth settings, "
+                "or set JBL_BD to its address (see 'tunedeck cli scan')."
+            )
             self._add_log(f"✗ {self.last_error}")
             return False
 
@@ -287,6 +322,15 @@ class HeadsetController:
         # System check: Connected at OS level
         if not check_device_connected(self.state.bt_address):
             self.last_error = f"Device {self.state.bt_address} is paired but not currently connected at the OS level."
+            self._add_log(f"✗ {self.last_error}")
+            return False
+
+        if self.state.profile.protocol_family != ProtocolFamily.AIROHA_RACE:
+            self.last_error = (
+                f"Hardware control for {self.state.profile.display_name} "
+                f"({self.state.profile.protocol_family.value}) is not implemented; "
+                f"only Airoha RACE headphones and earbuds are supported. Use --sim to explore the UI."
+            )
             self._add_log(f"✗ {self.last_error}")
             return False
 
@@ -393,11 +437,6 @@ class HeadsetController:
             return False
 
         success = self._connection.send_command(OP_NOISE_SET, payload)
-        if not success:
-            # Fallback to legacy opcode if OP_NOISE_SET fails
-            from .protocol import OP_NOISE_SET_LEGACY
-            success = self._connection.send_command(OP_NOISE_SET_LEGACY, payload)
-
         if success:
             self.state.noise_mode = mode
             self._add_log(f"🔇 Noise mode → {MODE_NAMES[mode]}")
@@ -584,11 +623,18 @@ class HeadsetController:
             self._add_log(f"✗ {self.last_error}")
             return False
 
+        if not experimental_commands_enabled():
+            self.last_error = f"EQ on hardware is experimental: {EXPERIMENTAL_HINT}."
+            self._add_log(f"✗ {self.last_error}")
+            self._notify()
+            return False
+
         payload = bytes([int(preset.value)])
         success = self._connection.send_command(OP_EQ_SET, payload)
         if success:
+            # Sent, but the device does not acknowledge OP_EQ_SET, so it is unconfirmed.
             self.state.eq_preset = preset
-            self._add_log(f"🎚️ EQ preset → {EQ_PRESET_NAMES.get(preset, 'Custom')}")
+            self._add_log(f"🎚️ EQ preset → {EQ_PRESET_NAMES.get(preset, 'Custom')} (sent, unconfirmed)")
             self._notify()
             return True
         else:
@@ -650,12 +696,18 @@ class HeadsetController:
             self._notify()
             return False
 
+        if not experimental_commands_enabled():
+            self.last_error = f"EQ on hardware is experimental: {EXPERIMENTAL_HINT}."
+            self._add_log(f"✗ {self.last_error}")
+            self._notify()
+            return False
+
         payload = bytes([len(bands)] + [b & 0xFF for b in bands])
         success = self._connection.send_command(OP_EQ_SET, payload)
         if success:
             self.state.eq_bands = bands
             self.state.eq_preset = EQPreset.CUSTOM
-            self._add_log(f"🎚️ Custom EQ: {bands}")
+            self._add_log(f"🎚️ Custom EQ: {bands} (sent, unconfirmed)")
             self._notify()
             return True
         else:
@@ -707,9 +759,15 @@ class HeadsetController:
             self._add_log(f"✗ {self.last_error}")
             return False
 
+        if not experimental_commands_enabled():
+            self.last_error = f"Remote power-off is experimental: {EXPERIMENTAL_HINT}."
+            self._add_log(f"✗ {self.last_error}")
+            self._notify()
+            return False
+
         success = self._connection.send_command(OP_POWER_OFF)
         if success:
-            self._add_log("⚡ Power off command sent")
+            self._add_log("⚡ Power off command sent (unconfirmed)")
             self.state.connected = False
             self._connection.disconnect()
         else:
@@ -750,6 +808,7 @@ class HeadsetController:
             "device": self.state.device_name,
             "category": self.state.profile.category.value,
             "battery_scheme": self.state.profile.battery_scheme.value,
+            "shows_tws_trio": self.state.shows_tws_trio,
             "battery": self.state.battery_level,
             "battery_left": self.state.battery_left,
             "battery_right": self.state.battery_right,
