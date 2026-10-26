@@ -4,6 +4,51 @@ All notable changes, bug fixes, and additions developed for the end-to-end testi
 
 ---
 
+## [Unreleased] Accuracy pass - 2026-10-27
+
+### Changed
+- **Unverified hardware commands are opt-in**: EQ (`0x0A01`) and remote power-off (`0x0104`) use opcodes that no response from a real device has confirmed. They are now only sent when `TUNEDECK_EXPERIMENTAL=1` is set, and are logged as "sent, unconfirmed".
+- **Speaker / PartyBox hardware control is refused** with a clear message. These devices use a different protocol from Airoha RACE, which is not implemented, so TuneDeck no longer sends RACE frames to them. Speaker and PartyBox profiles remain usable in `--sim`.
+- **TWS battery on hardware** now shows the single level that is actually read, not "Unknown" Left/Right/Case values. Per-bud levels are not decoded.
+- **Device detection**: Harman vendor IDs corrected to the Bluetooth SIG IDs `0x0057` / `0x075A`. `0x0ECB` is assigned to a different company (Zhong Shan City Richsound). Windows InstanceId matching now checks the `VID&` field, not any substring. Name matching now requires "JBL" in the name; generic words like "Live", "Charge" or "Club" matched non-JBL devices.
+- macOS `check_device_paired` no longer reports any address as paired just because some JBL device exists.
+- README platform table and feature list now match the implementation: macOS is simulation-only for control, and Windows hardware paths are untested.
+- `docs/battery_probe.md` rewritten. It no longer presents unsourced per-family field tables as probe results.
+
+### Fixed (GUI)
+- **Dark theme on light desktops**: a later `QWidget { background: transparent }` rule overrode the `QMainWindow` background, so the system palette showed through (white on light themes). The rule order is fixed, and the app now uses Fusion with an explicit dark palette.
+- **Cards never painted**: the `QFrame#cardFrame` style didn't match the `QWidget`-based cards. They now match `#cardFrame` and set `WA_StyledBackground`.
+- **Squashed or overlapping layout**: the content needed more height than the window's minimum, so the EQ sliders, device name and gauge overlapped. Tabs now scroll when space is short (e.g. Steam Deck), and the default size is 1000×820.
+- **Tab labels**: "Sound & Noise Control" rendered as "Sound _Noise Control" because `&` is a Qt mnemonic.
+- **Noise control on models without ANC**: Wave/Vibe Buds and Endurance Peak 3 lost their Ambient and TalkThru buttons because the GUI gated on ANC only. The card is now hidden only when a model has no noise control at all.
+- **Spotlight card**: the protocol tag and capability pills were clipped. Speaker and PartyBox profiles are now tagged "SIM ONLY".
+- **Battery dial label** reads HEADPHONES / EARBUDS / SPEAKER instead of always "HEADSET".
+- **Health metric cards**: a bare `QFrame` selector boxed every label inside them.
+- The Save button shows the platform's shortcut (Cmd+S on macOS).
+- **Possible crash on close**: background worker threads could emit into destroyed Qt objects (segfault in the GUI tests). The bridge now tracks its workers and waits for them on shutdown.
+
+### Changed (GUI launch & connection)
+- **`tunedeck-gui` connects to real hardware by default**, matching the TUI. Before, `--sim` defaulted to on and `--model` forced "JBL Tune 770NC", so the GUI never touched a device or detected its model. Use `--sim` for the simulator.
+- **Unticking "Simulation Mode" can now connect.** Hardware mode used to start with an empty address, which skipped device discovery. Switching modes or models also always reported "Connected", even when the connection failed. It now reports the real result, and the checkbox starts in the actual mode.
+- **Faster, accurate failure when Bluetooth is off**: a stopped BlueZ service is detected immediately (`systemctl is-active bluetooth`). Before, discovery waited about 8 s and then blamed a missing address. The full reason is shown in a banner under the header.
+- The address of a successfully connected device is remembered for the next launch.
+- New `scripts/install-launcher.sh` links `tunedeck` / `tunedeck-gui` into `~/.local/bin` (no venv activation needed) and adds a TuneDeck app-menu entry with a "simulation mode" action.
+- The checkbox indicator is now visible on the dark theme.
+- **No more Qt core dumps at launch on Linux/BSD**: a missing `libxcb-cursor` (Qt 6.5+ on X11) or a missing graphical session now prints what to do. Wayland sessions use Qt's Wayland backend automatically.
+- **macOS fails fast**: without RFCOMM sockets, hardware connect stops immediately with a clear message, not after several slow `system_profiler` probes.
+- README: added a per-system table of what to expect from the GUI.
+
+### Removed
+- RACE frame checksum support (`calculate_checksum`, `verify_checksum`, `with_checksum`, `verify_checksum_byte`). RACE frames have no checksum, and no real code path used it.
+- Dead `OP_NOISE_SET_LEGACY` send fallback. It only ran after a socket send had already failed and disconnected, so it could never succeed.
+- Unused `OP_EQ_GET` and `OP_DEVICE_INFO` constants.
+- Hardcoded `"status": "PASS"` from `scripts/generate_exception_report.py`. The report now documents expected handling and points to `pytest -m fault` for verification.
+
+### Corrections to earlier entries
+- Earlier entries claimed TWS Left/Right/Case battery on hardware, BLE transport, checksum verification, macOS hardware support, and specific test counts ("451 tests", "326 permutations across 27 models"). None of these were accurate or verified. They are marked ~~struck~~ below.
+
+---
+
 ## [Phase 2] Native Desktop GUI & Cross-Platform Engine - 2026-10-22
 
 ### Added
@@ -46,12 +91,12 @@ All notable changes, bug fixes, and additions developed for the end-to-end testi
   - Added dedicated `[🧪 Simulation]` / `[🔌 Hardware]` toggle button and `m` shortcut in TUI to explicitly switch modes.
   - Automatic hardware connection on TUI mount when a paired device address is available.
 - **Hardware ANC & Telemetry Synchronization Fix**:
-  - `jblpc/protocol.py`: Corrected Airoha RACE command opcode `OP_NOISE_SET = 0x0E06` (with fallback to `0x0908`), query payload `OP_NOISE_GET_PAYLOAD = 0500`, and added battery percentage parsing for `0x0403`.
+  - `jblpc/protocol.py`: Corrected Airoha RACE command opcode `OP_NOISE_SET = 0x0E06` ~~(with fallback to `0x0908`)~~, query payload `OP_NOISE_GET_PAYLOAD = 0500`, and added battery percentage parsing for `0x0403`.
   - Added `get_system_battery_level()` querying standard OS Bluetooth reporting (BlueZ `bluetoothctl` / UPower, macOS `system_profiler`, Windows PowerShell), preventing erroneous PMU status bytes from overriding actual battery percentage.
   - `jblpc/controller.py`: Drains initial unsolicited state notification frames upon RFCOMM socket connect, queries `0x0901` with proper `0500` payload, confirms set modes via response and notification parsing, and added non-blocking `poll()` for incoming unsolicited frames (e.g. physical headset button presses).
   - `jblpc/tui/app.py` & `tunedeck_gui/bridge.py`: Integrated non-blocking `poll()` into periodic refresh loops to update TUI and GUI displays in real-time when physical headset controls are pressed.
 - **Headless Test Suite (`tests/test_gui.py`, `tests/test_tui_e2e.py`, `tests/test_protocol.py`)**:
-  - 451 automated unit and integration tests passing (100%), with dedicated tests for unsolicited notification frames and battery percentage parsing.
+  - ~~451 automated unit and integration tests passing (100%)~~ Automated unit and integration tests, with dedicated tests for unsolicited notification frames and battery percentage parsing.
 
 ---
 
@@ -89,8 +134,8 @@ All notable changes, bug fixes, and additions developed for the end-to-end testi
   - TUI shortcut `e` to cycle standard EQ presets in real-time.
   - Capability checks preventing EQ commands on non-EQ hardware (e.g. Tune 510BT) with clean exit codes.
 - **Comprehensive End-to-End Test Suite (`tests/`)**:
-  - `tests/test_protocol.py`: Frame building, parsing, checksum verification, truncated frames, garbage byte recovery, oversized frames.
-  - `tests/test_cli_e2e.py`: 326 subprocess test permutations executing every CLI command across all 27 cataloged models in isolated environments with strict timeouts.
+  - `tests/test_protocol.py`: Frame building, parsing, ~~checksum verification,~~ truncated frames, garbage byte recovery, oversized frames.
+  - `tests/test_cli_e2e.py`: Subprocess tests executing CLI commands across ~~all 27~~ the cataloged models in isolated environments with strict timeouts.
   - `tests/test_tui_e2e.py`: Headless Textual TUI pilot tests exercising ANC, ambient, EQ band presets, and health toggle on TWS (`tune_230nc_tws`), headphone (`tune_770nc`), and speaker (`flip_6`).
   - `tests/test_fault_injection.py`: 20 deterministic fault injection tests covering adapter failure, missing tools, pairing issues, socket timeouts, corrupt configs, non-UTF8 strings, small terminals, and concurrency.
   - `tests/test_battery_health.py`: Synthetic discharge/charge history evaluation, database corruption handling, and confidence level assertions.
@@ -98,7 +143,7 @@ All notable changes, bug fixes, and additions developed for the end-to-end testi
 - **System Hardening & Safety**:
   - `jblpc/lock.py`: Non-blocking POSIX `flock` single-instance locking to prevent socket collisions.
   - `jblpc/exceptions.py`: Comprehensive custom exception hierarchy preventing raw tracebacks.
-  - `docs/battery_probe.md`: Detailed hardware battery register investigation across all JBL model families.
+  - `docs/battery_probe.md`: ~~Detailed hardware battery register investigation across all JBL model families.~~ Notes on which battery data is read (rewritten 2026-10-27).
   - `scripts/generate_exception_report.py`: Automated AST codebase scanner and exception report generator.
   - `run_tests.sh`: One-command automated test runner with virtualenv setup, pytest execution, and report generation.
 
