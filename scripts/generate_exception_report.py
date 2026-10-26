@@ -14,7 +14,9 @@ Maps the 20 fault injection points with:
   - Where it is caught (file and line)
   - User-visible message
   - Exit code
-  - Verification status (PASS/FAIL)
+
+The matrix documents expected behaviour; whether it holds is checked by
+tests/test_fault_injection.py (`pytest -m fault`), not by this script.
 """
 
 import ast
@@ -85,7 +87,7 @@ def scan_codebase_ast():
 
 def get_fault_matrix():
     """
-    Detailed verification matrix for the 20 required fault injection points.
+    Expected handling for the fault injection scenarios in tests/test_fault_injection.py.
     """
     matrix = [
         {
@@ -97,7 +99,6 @@ def get_fault_matrix():
             "where_caught": "cli.run_cli() exception handler, controller.connect()",
             "user_message": "✗ Error: Bluetooth adapter is powered off or missing.",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 2,
@@ -108,7 +109,6 @@ def get_fault_matrix():
             "where_caught": "cli.run_cli() exception handler, controller.connect()",
             "user_message": "✗ Error: bluetoothctl utility is not installed on this system.",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 3,
@@ -119,7 +119,6 @@ def get_fault_matrix():
             "where_caught": "controller.connect(), cli.run_cli() exception handler",
             "user_message": "✗ Error: Device AA:BB:CC:DD:EE:FF is not paired via Bluetooth.",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 4,
@@ -128,9 +127,8 @@ def get_fault_matrix():
             "injection_point": "jblpc.protocol.is_valid_mac / controller.connect",
             "raised": False,
             "where_caught": "controller.connect() validation guards",
-            "user_message": "✗ Error: No Bluetooth address configured / Invalid Bluetooth MAC address",
+            "user_message": "✗ Error: No JBL device found. Pair it in your system Bluetooth settings... / Invalid Bluetooth MAC address",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 5,
@@ -141,7 +139,6 @@ def get_fault_matrix():
             "where_caught": "cli.run_cli() exception handler, __main__.main()",
             "user_message": "✗ Error: Configuration file ... is empty / Corrupt configuration file",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 6,
@@ -152,7 +149,6 @@ def get_fault_matrix():
             "where_caught": "protocol.load_config(), protocol.save_config()",
             "user_message": "Auto-creates directory hierarchy ~/.config/jblpc",
             "exit_code": 0,
-            "status": "PASS",
         },
         {
             "id": 7,
@@ -163,7 +159,6 @@ def get_fault_matrix():
             "where_caught": "BluetoothConnection.connect(), controller.connect()",
             "user_message": "✗ Error: Connection refused by AA:BB:CC:DD:EE:FF on RFCOMM channel 21",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 8,
@@ -174,7 +169,6 @@ def get_fault_matrix():
             "where_caught": "BluetoothConnection.connect(), controller.connect()",
             "user_message": "✗ Error: Connection timeout after 5.0s connecting to AA:BB:CC:DD:EE:FF",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 9,
@@ -185,7 +179,6 @@ def get_fault_matrix():
             "where_caught": "BluetoothConnection.receive() timeout loop",
             "user_message": "None (non-blocking loop returns available frames; socket stays clean)",
             "exit_code": 0,
-            "status": "PASS",
         },
         {
             "id": 10,
@@ -196,7 +189,6 @@ def get_fault_matrix():
             "where_caught": "BluetoothConnection.receive() empty-read guard",
             "user_message": "✗ Remote device disconnected unexpectedly mid-session.",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 11,
@@ -207,18 +199,16 @@ def get_fault_matrix():
             "where_caught": "parse_frames() incomplete-frame break",
             "user_message": "None (retains remainder buffer and awaits next packet)",
             "exit_code": 0,
-            "status": "PASS",
         },
         {
             "id": 12,
-            "scenario": "Bad checksum",
-            "exception_type": "ProtocolError",
-            "injection_point": "jblpc.protocol.parse_frames (verify_checksum_byte=True)",
-            "raised": True,
-            "where_caught": "parse_frames() checksum validation, cli.run_cli() exception handler",
-            "user_message": "✗ Error: Frame checksum mismatch: expected 0xXX, got 0xYY",
+            "scenario": "Unverified command on hardware",
+            "exception_type": "None (command refused)",
+            "injection_point": "jblpc.controller.HeadsetController.set_eq_preset / set_eq_bands / power_off",
+            "raised": False,
+            "where_caught": "experimental_commands_enabled() check before sending",
+            "user_message": "✗ Error: EQ on hardware is experimental: this command uses an unverified protocol opcode; set TUNEDECK_EXPERIMENTAL=1 to send it anyway.",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 13,
@@ -229,7 +219,6 @@ def get_fault_matrix():
             "where_caught": "BluetoothConnection.send_and_receive(), cli.run_cli() exception handler",
             "user_message": "✗ Error: Unexpected response opcode: expected 0xXXXX, got 0xYYYY",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 14,
@@ -240,7 +229,6 @@ def get_fault_matrix():
             "where_caught": "HeadsetController.set_noise_mode(), .set_eq_preset(), .power_off()",
             "user_message": "✗ Error: ANC / Power off / Equalizer is not supported on <model>.",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 15,
@@ -251,7 +239,6 @@ def get_fault_matrix():
             "where_caught": "BluetoothConnection.connect(), controller.connect()",
             "user_message": "✗ Error: Permission denied accessing Bluetooth socket: [Errno 13]",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 16,
@@ -262,7 +249,6 @@ def get_fault_matrix():
             "where_caught": "cli.run_cli() exception handler",
             "user_message": "✗ Error: Another instance of TuneDeck (jblpc) is already running (locked by ...).",
             "exit_code": 1,
-            "status": "PASS",
         },
         {
             "id": 17,
@@ -273,7 +259,6 @@ def get_fault_matrix():
             "where_caught": "cli.run_cli() KeyboardInterrupt handler, __main__.main()",
             "user_message": "Operation cancelled by user.",
             "exit_code": 130,
-            "status": "PASS",
         },
         {
             "id": 18,
@@ -284,7 +269,6 @@ def get_fault_matrix():
             "where_caught": "Python standard runtime signal handler",
             "user_message": "Process terminated cleanly (exit code 143)",
             "exit_code": 143,
-            "status": "PASS",
         },
         {
             "id": 19,
@@ -295,7 +279,6 @@ def get_fault_matrix():
             "where_caught": "JBLPcApp.on_mount() terminal size check",
             "user_message": "Terminal size is small. Layout may be compressed. (TUI stays alive)",
             "exit_code": 0,
-            "status": "PASS",
         },
         {
             "id": 20,
@@ -306,7 +289,6 @@ def get_fault_matrix():
             "where_caught": "protocol subprocess .decode() calls (errors='replace')",
             "user_message": "Replaces invalid byte sequences with Unicode replacement character U+FFFD",
             "exit_code": 0,
-            "status": "PASS",
         },
     ]
     return matrix
@@ -319,15 +301,12 @@ def generate_reports():
     matrix = get_fault_matrix()
 
     total_scenarios = len(matrix)
-    passed_scenarios = sum(1 for m in matrix if m["status"] == "PASS")
-    failed_scenarios = total_scenarios - passed_scenarios
 
     # JSON report
     report_data = {
         "summary": {
-            "total_scenarios": total_scenarios,
-            "handled_scenarios": passed_scenarios,
-            "unhandled_scenarios": failed_scenarios,
+            "documented_scenarios": total_scenarios,
+            "verified_by": "pytest -m fault (tests/test_fault_injection.py)",
             "bare_except_count": len(ast_results["bare_excepts"]),
             "swallowed_exceptions_count": len(ast_results["swallowed_exceptions"]),
         },
@@ -345,9 +324,8 @@ def generate_reports():
         "",
         "## Summary",
         "",
-        f"- **Total Fault Scenarios Tested**: {total_scenarios}",
-        f"- **Handled Gracefully**: {passed_scenarios}",
-        f"- **Unhandled / Crashes**: {failed_scenarios}",
+        f"- **Documented Fault Scenarios**: {total_scenarios} "
+        "(expected behaviour; run `pytest -m fault` to verify)",
         f"- **Bare `except:` Found**: {len(ast_results['bare_excepts'])}",
         f"- **Swallowed Exceptions Found**: {len(ast_results['swallowed_exceptions'])}",
         "",
@@ -375,17 +353,17 @@ def generate_reports():
 
     md_lines.extend([
         "",
-        "## Fault Injection Verification Matrix",
+        "## Fault Injection Scenarios (Expected Handling)",
         "",
-        "| ID | Scenario | Exception Type | Injection Point | Where Caught | User-Visible Message | Exit Code | Status |",
-        "|---|---|---|---|---|---|---|---|",
+        "| ID | Scenario | Exception Type | Injection Point | Where Caught | User-Visible Message | Exit Code |",
+        "|---|---|---|---|---|---|---|",
     ])
 
     for m in matrix:
         clean_msg = m['user_message'].replace("|", "\\|")
         md_lines.append(
             f"| {m['id']} | **{m['scenario']}** | `{m['exception_type']}` | `{m['injection_point']}` | "
-            f"`{m['where_caught']}` | {clean_msg} | `{m['exit_code']}` | **{m['status']}** |"
+            f"`{m['where_caught']}` | {clean_msg} | `{m['exit_code']}` |"
         )
 
     md_lines.extend([
