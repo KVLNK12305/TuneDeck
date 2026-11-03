@@ -11,7 +11,7 @@ A terminal, desktop, and CLI controller for JBL headphones that use the Airoha R
 
 ## Status
 
-Tested on real hardware: **one Airoha RACE headset, on Linux only.** Everything else is untested or simulated.
+Tested on real hardware: Linux (maintainer) and Windows 11 (community tester). Everything else is untested or simulated.
 
 | Feature | Status |
 |---|---|
@@ -26,8 +26,8 @@ Tested on real hardware: **one Airoha RACE headset, on Linux only.** Everything 
 | OS | Hardware control |
 |---|---|
 | Linux | Yes (BlueZ, RFCOMM channel 21) |
-| Windows | Implemented, untested |
-| macOS | No. Python has no RFCOMM sockets there. Simulator only. |
+| Windows | Community tested |
+| macOS | Currently untested |
 
 ## Install
 
