@@ -26,6 +26,9 @@ test = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
 ]
+dbus = [
+    "dbus-fast>=2.0.0; sys_platform == 'linux'",
+]
 
 [project.scripts]
 tunedeck = "jblpc.__main__:main"

@@ -56,6 +56,8 @@ from .exceptions import (
     UnsupportedCommandError,
 )
 from .health import BatteryHealthTracker, generate_synthetic_history
+from .drivers import get_driver_for_profile, BaseDeviceDriver
+from .dsp import calculate_preamp_headroom
 
 
 def experimental_commands_enabled() -> bool:
@@ -204,12 +206,21 @@ class HeadsetController:
         )
         self._simulate = simulate
         self._connection: Optional[BluetoothConnection] = connection
+        self._driver: Optional[BaseDeviceDriver] = None
         self._listeners: list[Callable[[HeadsetState], None]] = []
         self._log: list[str] = initial_log
         self.last_error: Optional[str] = None
 
         if not simulate and bt_address and self._connection is None:
             self._connection = BluetoothConnection(bt_address, channel=profile.rfcomm_channel)
+
+        if not simulate and (bt_address or self._connection is not None):
+            self._driver = get_driver_for_profile(bt_address, profile=profile, connection=self._connection)
+
+    @property
+    def driver(self) -> Optional[BaseDeviceDriver]:
+        """Active hardware device driver."""
+        return self._driver
 
     @property
     def simulating(self) -> bool:
@@ -228,6 +239,8 @@ class HeadsetController:
         self.state.profile = profile
         self.state.device_name = profile.display_name
         self.state.eq_bands = [0] * len(profile.eq_band_frequencies)
+        if not self._simulate and (self.state.bt_address or self._connection is not None):
+            self._driver = get_driver_for_profile(self.state.bt_address, profile=profile, connection=self._connection)
         self._notify()
 
     def add_listener(self, callback: Callable[[HeadsetState], None]):

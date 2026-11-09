@@ -48,7 +48,14 @@ class SingleInstanceLock:
     def acquire(self):
         """Acquire lock or raise InstanceLockError if another instance holds it."""
         try:
-            self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                # Fallback to temp directory if XDG_RUNTIME_DIR is not writable
+                import tempfile
+                self.lock_path = Path(tempfile.gettempdir()) / "jblpc" / self.lock_path.name
+                self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+
             self._file = open(self.lock_path, "w+")
             if fcntl:
                 fcntl.flock(self._file, fcntl.LOCK_EX | fcntl.LOCK_NB)

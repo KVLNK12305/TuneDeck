@@ -27,6 +27,7 @@ class ProtocolFamily(Enum):
     JBL_PORTABLE = "JBL Portable / PartyBoost"
     PARTYBOX = "JBL PartyBox"
     QUANTUM = "JBL Quantum Gaming"
+    GENERIC_BT = "Generic Bluetooth (HFP/A2DP/AVRCP)"
 
 
 class BatteryScheme(Enum):

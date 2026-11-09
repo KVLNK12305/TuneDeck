@@ -21,7 +21,11 @@ from .exceptions import JBLPcError
 
 
 def get_data_dir() -> Path:
-    """Get the data directory for TuneDeck / JBLPc across platforms."""
+    """Return the data directory path for TuneDeck / JBLPc across platforms.
+
+    This is a pure path-resolution function: it never creates directories
+    or touches the filesystem, so it is safe to call at module-import time.
+    """
     xdg_data = os.environ.get("XDG_DATA_HOME")
     if xdg_data:
         base = Path(xdg_data)
@@ -36,9 +40,7 @@ def get_data_dir() -> Path:
     jblpc_dir = base / "jblpc"
     if tunedeck_dir.exists() and (tunedeck_dir / "health.db").exists():
         return tunedeck_dir
-    data_dir = jblpc_dir
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir
+    return jblpc_dir
 
 
 
@@ -72,10 +74,16 @@ class BatteryHealthTracker:
 
     def __init__(self, db_path: Optional[Union[str, Path]] = None):
         if db_path is None:
-            self.db_path = get_data_dir() / "health.db"
+            self.db_path = DEFAULT_DB_PATH
         else:
             self.db_path = Path(db_path)
+
+        try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            raise JBLPcError(
+                f"Cannot create battery health data directory {self.db_path.parent}: {e}"
+            ) from e
 
         self._init_db()
 

@@ -321,6 +321,9 @@ def rfcomm_unsupported_reason() -> Optional[str]:
     return "Hardware control isn't available here: this Python has no Bluetooth RFCOMM socket support."
 
 
+# NOTE: BluetoothConnection and raw opcode send/receive helpers are maintained
+# here for backward compatibility with existing tests and scripts. In a future
+# release, internal transport logic will fully migrate to jblpc.drivers.airoha_race.
 class BluetoothConnection:
     """Manages the Bluetooth RFCOMM socket connection to the device."""
 

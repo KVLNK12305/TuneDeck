@@ -207,3 +207,56 @@ def test_confidence_tiers(isolated_env):
     h2 = tracker.get_component_health(dev, "single")
     assert h2.confidence == "medium"
     assert "days of observation" in h2.note
+
+
+@pytest.mark.health
+def test_import_does_not_create_directories(monkeypatch, tmp_path):
+    """Importing jblpc.health must not attempt filesystem writes at module scope.
+
+    Regression test for the import-time side-effect where ``get_data_dir()``
+    called ``mkdir()`` at the top level, crashing on read-only filesystems.
+    """
+    import importlib
+    import jblpc.health as health_mod
+
+    # Point XDG_DATA_HOME at a nonexistent deep path under tmp_path
+    fake_base = tmp_path / "nonexistent" / "deep" / "path"
+    monkeypatch.setenv("XDG_DATA_HOME", str(fake_base))
+
+    # Reload the module — this re-evaluates get_data_dir() at top level
+    importlib.reload(health_mod)
+
+    # The directory must NOT have been created by the module reload
+    assert not (fake_base / "jblpc").exists()
+    assert not (fake_base / "tunedeck").exists()
+
+
+@pytest.mark.health
+def test_tracker_init_creates_directory(isolated_env):
+    """BatteryHealthTracker.__init__() creates the data directory lazily."""
+    nested = isolated_env["data_dir"] / "deep" / "nested" / "dir"
+    db_file = nested / "health.db"
+    # Directory does not exist yet
+    assert not nested.exists()
+
+    tracker = BatteryHealthTracker(db_path=db_file)
+    # Now it should exist
+    assert nested.exists()
+    assert tracker.log_reading("dev1", "single", 50) is True
+
+
+@pytest.mark.health
+def test_tracker_init_raises_on_unwritable_path(monkeypatch, tmp_path):
+    """BatteryHealthTracker.__init__() raises JBLPcError for unwritable paths."""
+    from jblpc.exceptions import JBLPcError
+
+    # Use a path whose parent cannot be created (monkeypatch mkdir to fail)
+    bad_path = tmp_path / "readonly" / "health.db"
+
+    def fake_mkdir(self_path, parents=False, exist_ok=False):
+        raise OSError(30, "Read-only file system")
+
+    monkeypatch.setattr(Path, "mkdir", fake_mkdir)
+
+    with pytest.raises(JBLPcError, match="Cannot create battery health data directory"):
+        BatteryHealthTracker(db_path=bad_path)
